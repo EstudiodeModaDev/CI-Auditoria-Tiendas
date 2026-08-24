@@ -38,7 +38,7 @@ export async function signInWithMicrosoft() {
     provider: 'azure',
     options: {
       scopes: 'email',
-      redirectTo: 'https://estudiodemoda.co', //TODO: POner la URL final
+      redirectTo: 'https://ashy-water-0d0097d1e.7.azurestaticapps.net/', //TODO: POner la URL final
     },
   })
 
