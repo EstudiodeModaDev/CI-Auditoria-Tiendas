@@ -1,0 +1,149 @@
+:root {
+  --color-canvas: #f4f7fb;
+  --color-surface: rgba(255, 255, 255, 0.92);
+  --color-surface-alt: #eef3f9;
+  --color-border: rgba(114, 138, 163, 0.2);
+  --color-border-strong: rgba(77, 102, 128, 0.34);
+  --color-text: #516173;
+  --color-text-muted: #708194;
+  --color-text-strong: #142235;
+  --color-accent: #2f82ff;
+  --color-accent-strong: #1557c8;
+  --color-accent-subtle: rgba(47, 130, 255, 0.12);
+  --color-accent-border: rgba(47, 130, 255, 0.28);
+  --color-success: #0f9f80;
+  --color-danger: #c44f4f;
+
+  --shadow-soft: 0 18px 45px rgba(17, 42, 68, 0.08);
+  --shadow-accent: 0 14px 30px rgba(21, 87, 200, 0.18);
+
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
+  --radius-3xl: 32px;
+
+  --space-1: 0.3rem;
+  --space-2: 0.65rem;
+  --space-3: 1rem;
+  --space-4: 1.4rem;
+  --space-5: 1.75rem;
+  --space-6: 2.4rem;
+  --space-7: 3rem;
+
+  --motion-base: 180ms ease;
+
+  --font-body: 'Aptos', 'Segoe UI', 'Trebuchet MS', sans-serif;
+  --font-display: 'Aptos Display', 'Segoe UI Semibold', 'Trebuchet MS', sans-serif;
+  --font-mono: 'Cascadia Code', 'Consolas', monospace;
+
+  --form-header-bg-start: #0d3156;
+  --form-header-bg-end: #15507f;
+  --form-header-text-primary: #f5f9ff;
+  --form-header-border-color: rgba(33, 101, 166, 0.34);
+  --form-header-status-bg: rgba(255, 255, 255, 0.08);
+  --form-header-status-border: rgba(255, 255, 255, 0.2);
+  --form-header-accent-positive: #67ddb9;
+  --form-header-shadow: var(--shadow-soft);
+
+  --form-header-height: 168px;
+  --form-header-radius: var(--radius-3xl);
+  --form-header-status-radius: var(--radius-2xl);
+  --form-header-status-width: 264px;
+
+  --form-header-space-outer: 16px 20px;
+  --form-header-space-inner: 24px 44px;
+  --form-header-status-padding: 16px 18px 14px;
+  --form-header-space-gap: 24px;
+  --form-header-space-xs: 6px;
+  --form-header-space-xxs: 4px;
+
+  --form-card-bg: var(--color-surface);
+  --form-card-text-primary: var(--color-text-strong);
+  --form-card-border-color: var(--color-border);
+  --form-card-shadow: var(--shadow-soft);
+
+  --form-card-width: 300px;
+  --form-card-height: 124px;
+  --form-card-radius: var(--radius-2xl);
+  --form-card-padding: 28px 30px;
+  --form-card-space-y: 30px;
+
+  --form-fields-bg: var(--color-surface);
+  --form-fields-shadow: var(--shadow-soft);
+  --form-fields-title-color: var(--color-text-strong);
+  --form-fields-label-color: var(--color-text-strong);
+  --form-fields-status-bg-start: #d7f4ea;
+  --form-fields-status-bg-end: #bcebd8;
+  --form-fields-status-text: #106e56;
+  --form-fields-control-border: rgba(114, 138, 163, 0.26);
+  --form-fields-control-bg: #f8fbfe;
+  --form-fields-control-text: #3b4f64;
+  --form-fields-control-placeholder: #8ea1b4;
+  --form-fields-control-focus-border: var(--color-accent);
+  --form-fields-control-focus-ring: rgba(47, 130, 255, 0.18);
+
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--color-text);
+  background: var(--color-canvas);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(244, 247, 251, 0.98)),
+    var(--color-canvas);
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-body);
+}
+
+#root {
+  min-height: 100svh;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+code {
+  padding: 0.2rem 0.45rem;
+  border-radius: 10px;
+  background: rgba(20, 34, 53, 0.06);
+  color: var(--color-text-strong);
+  font-family: var(--font-mono);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
