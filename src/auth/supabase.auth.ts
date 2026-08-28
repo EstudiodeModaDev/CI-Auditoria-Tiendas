@@ -1,7 +1,6 @@
 import { supabase } from '../services/supabase.service'
 
 const POST_LOGIN_REDIRECT_KEY = "post_login_redirect_pending";
-const mode = import.meta.env.VITE_SITE_MODE ?? "prod"
 
 export function markPostLoginRedirectPending() {
   if (typeof window === "undefined") return;
@@ -39,7 +38,8 @@ export async function signInWithMicrosoft() {
     provider: 'azure',
     options: {
       scopes: 'email',
-      redirectTo: mode === "dev" ? "http://localhost:5173/" :'https://ashy-water-0d0097d1e.7.azurestaticapps.net/', //TODO: POner la URL final
+      redirectTo: 'https://ashy-water-0d0097d1e.7.azurestaticapps.net/', //TODO: POner la URL final
+      //redirectTo: mode === "dev" ? "http://localhost:5173/" :'https://ashy-water-0d0097d1e.7.azurestaticapps.net/', //TODO: POner la URL final
     },
   })
 
