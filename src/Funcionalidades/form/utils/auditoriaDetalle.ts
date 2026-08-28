@@ -41,7 +41,7 @@ export function updateDetalleItem(
       ...patch,
     }
 
-    if (nextDetalle.cumple === true) {
+    if (patch.cumple === true) {
       nextDetalle.observacion = ''
       nextDetalle.id_causal = null
       nextDetalle.cantidad_afectada = null

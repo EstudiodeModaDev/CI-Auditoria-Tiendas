@@ -8,6 +8,7 @@ import { PlanAccionThirdPartForm } from './plan-accion-third-part'
 import type { tienda } from '../../models/database/tienda'
 import { mapTiendaOption } from '../../Funcionalidades/shared/react-select'
 import { useEvidenciasAttachmentsForm } from '../../Funcionalidades/evidencias-attachments/evidenciasAttachmentsForm'
+import type { auditoria } from '../../models/database/auditoria'
 
 type PlanAccionFormProps = {
   isOpen: boolean
@@ -17,9 +18,10 @@ type PlanAccionFormProps = {
   tiendas: tienda[]
   areasResponsables: SelectOption[]
   controller: ReturnType<typeof usePlanAccion>
+  auditoria: auditoria
 }
 
-export function PlanAccionForm({ isOpen, onClose, causalesOptions, zonaOptions, tiendas, areasResponsables, controller }: PlanAccionFormProps) {
+export function PlanAccionForm({ auditoria, isOpen, onClose, causalesOptions, zonaOptions, tiendas, areasResponsables, controller }: PlanAccionFormProps) {
   const {attachments, addAttachment, resetAttachments} = useEvidenciasAttachmentsForm()
 
   const tiendasOptions = React.useMemo(
@@ -73,8 +75,8 @@ export function PlanAccionForm({ isOpen, onClose, causalesOptions, zonaOptions, 
             updateField={controller.setField}
             state={controller.state}
             errors={controller.planErrors}
-            loading={controller.loading}
-          />
+            loading={controller.loading} 
+            auditoria={auditoria}/>
 
           <PlanAccionSeconPartForm
             state={controller.state}
@@ -91,6 +93,16 @@ export function PlanAccionForm({ isOpen, onClose, causalesOptions, zonaOptions, 
             errors={controller.planErrors}
             loading={controller.loading}
           />
+
+          <label className="action-plan-form__notify">
+            <input
+              type="checkbox"
+              checked={controller.notificarJefeZona}
+              onChange={(event) => controller.setNotificarJefeZona(event.target.checked)}
+              disabled={controller.loading}
+            />
+            <span>Notificar al jefe de zona al crear el plan de accion</span>
+          </label>
 
           <footer className="action-plan-form__footer">
             <div>

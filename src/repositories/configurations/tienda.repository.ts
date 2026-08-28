@@ -16,6 +16,17 @@ export class SupabaseTiendaRepository implements ConfigurationsRepository<tienda
       }
     }
 
+    const {data: tienda,} = await supabase.from(this.tableName)
+      .select("*")
+      .eq('id_tienda', id)
+      .maybeSingle()
+
+    if(tienda.id_bodega){
+      await supabase.from("BODEGA")
+        .update({activo: true})
+        .eq("id_bodega", tienda.id_bodega)
+    }    
+
     const {data, error} = await supabase.from(this.tableName).update({activo: true}).eq('id_tienda', id)
 
     if(error){
@@ -183,7 +194,20 @@ export class SupabaseTiendaRepository implements ConfigurationsRepository<tienda
       }
     }
 
-    const {data, error} = await supabase.from(this.tableName).update({activo: false}).eq('id_tienda', id)
+    const {data: tienda,} = await supabase.from(this.tableName)
+      .select("*")
+      .eq('id_tienda', id)
+      .maybeSingle()
+
+    if(tienda.id_bodega){
+      await supabase.from("BODEGA")
+        .update({activo: false})
+        .eq("id_bodega", tienda.id_bodega)
+    }    
+
+    const {data, error} = await supabase.from(this.tableName)
+      .update({activo: false})
+      .eq('id_tienda', id)
 
     if(error){
       return{

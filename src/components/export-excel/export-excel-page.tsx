@@ -4,6 +4,7 @@ import './export-excel-page.css'
 import { useExportExcel } from '../../Funcionalidades/export-excel/hooks/useExportExcel'
 import { mapAuditorOption, mapTiendaOption, mapZonaOption, selectedOption } from '../../Funcionalidades/shared/react-select'
 import type { SelectOption } from '../../Funcionalidades/configs/tienda/hooks/useTiendaRelations'
+import type { areas_responsables } from '../../models/database/areas_responsables'
 import type { auditor } from '../../models/database/auditor'
 import type { bodega } from '../../models/database/bodega'
 import type { causal } from '../../models/database/causal'
@@ -22,6 +23,7 @@ type ExportExcelPageProps = {
   bodegas: bodega[]
   tiposTienda: tipo_tienda[]
   causales: causal[]
+  areasResponsables: areas_responsables[]
   modalidades: SelectOption[]
 }
 
@@ -34,6 +36,7 @@ export function ExportExcelPage(props: ExportExcelPageProps) {
     tiposTienda: props.tiposTienda,
     auditores: props.auditores,
     causales: props.causales,
+    areasResponsables: props.areasResponsables,
   })
 
   const zonaOptions = React.useMemo(() => props.zonas.map(mapZonaOption), [props.zonas])
@@ -138,6 +141,7 @@ export function ExportExcelPage(props: ExportExcelPageProps) {
         <KpiCard titulo="Auditorias encontradas" subtitulo="En el rango seleccionado" valor={controller.auditorias.length} />
         <KpiCard titulo="Hojas por mes" subtitulo="Una hoja por mes en el rango" valor={controller.months.length} />
         <KpiCard titulo="Items de evaluacion" subtitulo="Catalogo activo" valor={controller.itemsEvaluacion.length} />
+        <KpiCard titulo="Planes de accion" subtitulo="Con su ultima respuesta" valor={controller.planesAccion.length} />
       </section>
 
       {controller.error ? <p className="export-excel-page__message">{controller.error}</p> : null}
@@ -156,6 +160,7 @@ export function ExportExcelPage(props: ExportExcelPageProps) {
                 <strong>{month.sheetName}</strong>: resultados de auditoria de {month.label} {month.year}.
               </li>
             ))}
+            <li><strong>Planes de accion</strong>: planes generados por las auditorias del rango, con la ultima respuesta registrada para cada uno.</li>
           </ul>
         </div>
 

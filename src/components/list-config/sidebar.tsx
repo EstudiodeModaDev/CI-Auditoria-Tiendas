@@ -1,70 +1,7 @@
 
 import './list-config-page.css'
-
-type ListDefinition = {
-  id: string
-  name: string
-  shortName: string
-}
-
-type ListItem = {
-  id: string
-  title: string
-  subtitle: string
-  summary: string
-  status: boolean
-  values: Record<string, string>
-}
-
-type ItemMap = Record<string, ListItem[]>
-
-const listDefinitions: ListDefinition[] = [
-    {
-    id: 'auditores',
-    name: 'Auditores',
-    shortName: 'AU',
-  },
-  {
-    id: 'causales',
-    name: 'Causales',
-    shortName: 'CA',
-  },
-  {
-    id: 'zonas',
-    name: 'Zonas',
-    shortName: 'ZN',
-  },
-  {
-    id: 'jefes-zona',
-    name: 'Jefes de zona',
-    shortName: 'JZ',
-  },
-  {
-    id: 'tiendas',
-    name: 'Tiendas',
-    shortName: 'TD',
-  },
-  {
-    id: 'tipos-tienda',
-    name: 'Tipos de tienda',
-    shortName: 'TT',
-  },
-  {
-    id: 'marcas',
-    name: 'Marcas',
-    shortName: 'MK',
-  },
-  {
-    id: 'bodegas',
-    name: 'Bodegas',
-    shortName: 'BG',
-  },
-  {
-    id: 'items-evaluacion',
-    name: 'Items de evaluacion',
-    shortName: 'IE',
-  },
-]
+import type { ItemMap, ListDefinition } from '../../models/components/config'
+import { listDefinitions } from './entity-config'
 
 type Props = {
   setSelectedListId: (s: string) => void

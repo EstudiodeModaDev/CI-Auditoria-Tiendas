@@ -4,6 +4,8 @@ import type { SelectOption } from '../../Funcionalidades/configs/tienda/hooks/us
 import { buildConfigSelectStyles, buildSelectLayerProps } from '../commons/react-select-styles'
 import { selectedOption } from '../../Funcionalidades/shared/react-select'
 import type { planAccion, planesErrors } from '../../models/database/plan_accion'
+import React from 'react'
+import type { auditoria } from '../../models/database/auditoria'
 
 const impactoOptions: SelectOption[] = [
   { label: 'Bajo', value: 'Bajo' },
@@ -16,6 +18,14 @@ function getNumericOptionValue(option: SelectOption | null) {
   return typeof option?.value === 'number' ? option.value : null
 }
 
+function formatDateInputValue(value: Date) {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
 
 type Props = {
   zonaOptions: SelectOption[]
@@ -26,6 +36,7 @@ type Props = {
   state: planAccion
   errors: planesErrors
   loading: boolean
+  auditoria: auditoria
 }
 
 export function PlanAccionFirstPartForm({
@@ -37,8 +48,17 @@ export function PlanAccionFirstPartForm({
   updateField,
   errors,
   loading,
+  auditoria
 }: Props) {
   const selectLayerProps = buildSelectLayerProps()
+
+  React.useEffect(() => {
+    updateField("fecha_creacion", formatDateInputValue(auditoria.fecha_auditoria))
+    updateField("id_zona", auditoria.id_zona)
+    updateField("id_tienda", auditoria.id_tienda)
+    updateField("responsable", auditoria.id_auditor)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auditoria])
 
   return (
     <section className="action-plan-form__section">
@@ -58,17 +78,18 @@ export function PlanAccionFirstPartForm({
 
       <label className="action-plan-form__field">
         <span>Tipo de hallazgo</span>
-        <Select
+        <Select<SelectOption, true>
           inputId="plan-tipo-hallazgo"
           options={causalOptions}
-          value={causalOptions.find((option) => option.label === state.tipo_hallazgo) ?? null}
-          onChange={(selected) => updateField('tipo_hallazgo', selected?.label ?? '')}
-          placeholder="Selecciona el causal del hallazgo"
+          value={causalOptions.filter((option) => state.tipo_hallazgo.includes(String(option.label)))}
+          onChange={(selected) => updateField('tipo_hallazgo', (selected ?? []).map((option) => String(option.label)))}
+          placeholder="Selecciona uno o mas causales del hallazgo"
           isClearable
           isDisabled={loading}
           noOptionsMessage={() => 'No hay causales registradas'}
           {...selectLayerProps}
-          styles={buildConfigSelectStyles<SelectOption>()}
+          styles={buildConfigSelectStyles<SelectOption, true>()}
+          isMulti
         />
         {errors.tipo_hallazgo ? <small className="action-plan-form__error">{errors.tipo_hallazgo}</small> : null}
       </label>

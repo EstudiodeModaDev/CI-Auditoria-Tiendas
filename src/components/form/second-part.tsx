@@ -108,9 +108,24 @@ export function SecondPartForm({onOpenActionPlanModal, auditoria, causales, getI
               causales={getCausalesByItem(causales, itemId)}
               loading={loading || itemId == null}
               onChange={(patch) => itemId != null && updateItemResult(itemId, patch)} 
-              onOpenActionPlanModal={onOpenActionPlanModal}            />
+            />
           )
         })}
+      </div>
+
+      <div className="audit-form__item-plan-action">
+        <div className="audit-form__item-plan-copy">
+          <strong>Plan de accion</strong>
+          <p>Registra un seguimiento correctivo para este hallazgo.</p>
+        </div>
+        <button
+          className="audit-form__item-plan-button"
+          onClick={onOpenActionPlanModal}
+          type="button"
+          disabled={loading}
+        >
+          Crear plan de accion
+        </button>
       </div>
     </section>
 

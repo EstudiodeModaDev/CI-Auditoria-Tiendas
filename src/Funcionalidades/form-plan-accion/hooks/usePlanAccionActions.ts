@@ -8,10 +8,11 @@ import { actionPlanCreatedNotification } from "../../mails/mailsFunctions";
 type PendingPlan = {
   plan: planAccion;
   attachments: File[];
+  notificarJefeZona: boolean;
 };
 
 export function usePlanAccionActions() {
-  const { planAccion, tienda, auditores, areasResponsables } = useRepositories()
+  const { planAccion, tienda, auditores, areasResponsables, jefeZona } = useRepositories()
   const { uploadAttachment } = useEvidenciasAttachmentsActtions()
   const [plansToCreate, setPlanToCreate] = React.useState<PendingPlan[]>([])
 
@@ -24,6 +25,10 @@ export function usePlanAccionActions() {
     }
 
     try {
+      const jefeZonaFounded = auditoria.id_jefe_zona
+        ? await jefeZona?.getById(String(auditoria.id_jefe_zona))
+        : null
+
       for (const currentPlan of plansToCreate) {
         if(!auditoria.id_tienda) continue
         const tiendaFounded = await tienda?.getById(String(auditoria.id_tienda))
@@ -48,7 +53,13 @@ export function usePlanAccionActions() {
           planId: response.data.id_plan_accion,
         })
 
-        await actionPlanCreatedNotification(response.data, tiendaFounded?.data!, auditorFounded?.data!, areasFounded?.data?.nombre!)
+        await actionPlanCreatedNotification(
+          response.data,
+          tiendaFounded?.data!,
+          auditorFounded?.data!,
+          areasFounded?.data?.nombre!,
+          currentPlan.notificarJefeZona ? jefeZonaFounded?.data : null
+        )
 
         if (!uploadResponse.ok) {
           return {
@@ -72,8 +83,8 @@ export function usePlanAccionActions() {
     }
   }
 
-  const addNewPlanToCreate = (newPlan: planAccion, attachments: File[]): boolean => {
-    setPlanToCreate((current) => [...current, { plan: newPlan, attachments }])
+  const addNewPlanToCreate = (newPlan: planAccion, attachments: File[], notificarJefeZona: boolean): boolean => {
+    setPlanToCreate((current) => [...current, { plan: newPlan, attachments, notificarJefeZona }])
     return true
   }
 

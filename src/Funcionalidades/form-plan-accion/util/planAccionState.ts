@@ -18,7 +18,7 @@ export function cleanPlanAccionState(): planAccion {
     prioridad: "",
     recursos_requeridos: "",
     responsable: "",
-    tipo_hallazgo: "",
+    tipo_hallazgo: [],
     correo_responsable: ""
   }
 }

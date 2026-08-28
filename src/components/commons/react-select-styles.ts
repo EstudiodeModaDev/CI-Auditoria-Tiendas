@@ -6,7 +6,7 @@ type BaseSelectOption = {
   helper?: string
 }
 
-export function buildConfigSelectStyles<Option extends BaseSelectOption>(): StylesConfig<Option, false, GroupBase<Option>> {
+export function buildConfigSelectStyles<Option extends BaseSelectOption, IsMulti extends boolean = false>(): StylesConfig<Option, IsMulti, GroupBase<Option>> {
   return {
     control: (base, state) => ({
       ...base,

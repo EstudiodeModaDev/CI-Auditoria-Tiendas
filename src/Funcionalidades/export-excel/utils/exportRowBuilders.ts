@@ -1,12 +1,15 @@
+import type { areas_responsables } from '../../../models/database/areas_responsables'
 import type { auditor } from '../../../models/database/auditor'
 import type { auditoria, auditoriaDetalle } from '../../../models/database/auditoria'
 import type { bodega } from '../../../models/database/bodega'
 import type { causal } from '../../../models/database/causal'
 import type { item_evaluacion } from '../../../models/database/items_evaluacion'
 import type { jefe_zona } from '../../../models/database/jefe_zona'
+import type { planAccionSeguimiento } from '../../../models/database/plan_accion'
 import type { tienda } from '../../../models/database/tienda'
 import type { tipo_tienda } from '../../../models/database/tipo_tienda'
 import type { zona } from '../../../models/database/zona'
+import type { PlanAccionExportRow } from '../hooks/useExportPlanAccionData'
 import { buildChecklistBlockValues, LEGACY_CHECKLIST_BLOCKS } from './legacyChecklistColumns'
 import { isInMonth, toDate } from './monthNames'
 
@@ -217,5 +220,64 @@ export function buildMonthlyAuditoriaRows(deps: MonthlyAuditoriaDeps) {
     rows,
     zonaColumnValues,
     jefeZonaColumnValues,
+  }
+}
+
+export type PlanesAccionDeps = {
+  planes: PlanAccionExportRow[]
+  zonas: zona[]
+  tiendas: tienda[]
+  areasResponsables: areas_responsables[]
+}
+
+function formatUltimaRespuesta(respuesta: planAccionSeguimiento | null): SheetRow {
+  if (!respuesta) {
+    return ['', '', 'Sin respuestas registradas']
+  }
+
+  const fecha = toDate(respuesta.fecha_seguimiento)
+
+  return [fecha ?? '', respuesta.usuario || '', respuesta.comentario || '']
+}
+
+function formatPlanFecha(value: string): SheetCellValue {
+  return toDate(value) ?? value ?? ''
+}
+
+export function buildPlanesAccionRows(deps: PlanesAccionDeps) {
+  const zonaById = new Map(deps.zonas.map((item) => [item.id_zona, item.nombre]))
+  const tiendaById = new Map(deps.tiendas.map((item) => [item.id_tienda, item.nombre]))
+  const areaResponsableById = new Map(deps.areasResponsables.map((item) => [item.id_area_responsable, item.nombre]))
+
+  const rows: SheetRow[] = deps.planes.map(({ plan, ultimaRespuesta }: PlanAccionExportRow) => {
+    const generalColumns: SheetRow = [
+      plan.id_plan_accion ?? '',
+      plan.id_auditoria ?? '',
+      plan.id_zona != null ? zonaById.get(plan.id_zona) ?? '' : '',
+      plan.id_tienda != null ? tiendaById.get(plan.id_tienda) ?? '' : '',
+      plan.id_area_responsable != null ? areaResponsableById.get(plan.id_area_responsable) ?? '' : '',
+      plan.responsable || '',
+      Array.isArray(plan.tipo_hallazgo) ? plan.tipo_hallazgo.join(', ') : '',
+      plan.descripcion_hallazgo || '',
+      plan.impacto || '',
+      plan.actividad_correctiva || '',
+      plan.estado || '',
+      plan.prioridad || '',
+      plan.porcentaje_avance ?? 0,
+      formatPlanFecha(plan.fecha_creacion),
+      formatPlanFecha(plan.fecha_compromiso),
+    ]
+
+    return [...generalColumns, ...formatUltimaRespuesta(ultimaRespuesta)]
+  })
+
+  return {
+    headers: [
+      'ID Plan', 'Auditoria', 'Zona', 'Tienda', 'Area responsable', 'Responsable',
+      'Tipo hallazgo', 'Descripcion hallazgo', 'Impacto', 'Actividad correctiva',
+      'Estado', 'Prioridad', '% Avance', 'Fecha creacion', 'Fecha compromiso',
+      'Fecha ultima respuesta', 'Usuario ultima respuesta', 'Ultima respuesta',
+    ],
+    rows,
   }
 }

@@ -265,6 +265,29 @@
   color: var(--color-danger);
 }
 
+.action-plan-form__notify {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border: 1px solid rgba(15, 63, 110, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--color-text-strong);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.action-plan-form__notify input {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: none;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
 .action-plan-form__footer {
   display: flex;
   justify-content: space-between;

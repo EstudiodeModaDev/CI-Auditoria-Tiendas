@@ -38,7 +38,6 @@ type AuditoriaFormRouteProps = {
 const estadoInventarioOptions = [
   { label: "Ejecutado", value: "Ejecutado" },
   { label: "Cancelado", value: "Cancelado" },
-  { label: "No programado", value: "No programado" },
 ]
 
 const causalCancelacionOptions = [
@@ -180,13 +179,14 @@ function App() {
       <Route path="/plan-accion" element={
           <ProtectedRoute allowedRoles={['admin', 'auditor']}>
             <AppShell>
-              <PlanAccionHome 
-                auditores={auditores} 
-                tiendas={tienda} 
-                zonas={zonas} 
-                jefesZona={jefesZonas} 
-                modalidades={[]} 
-                estadosInventario={estadoInventarioOptions}            
+              <PlanAccionHome
+                auditores={auditores}
+                tiendas={tienda}
+                zonas={zonas}
+                jefesZona={jefesZonas}
+                areasResponsables={areasResponsables}
+                modalidades={[]}
+                estadosInventario={estadoInventarioOptions}
               />
             </AppShell>
           </ProtectedRoute>
@@ -230,6 +230,7 @@ function App() {
                 bodegas={bodegas}
                 tiposTienda={tipos_tienda}
                 causales={causales}
+                areasResponsables={areasResponsables}
                 modalidades={[
                   { label: "Presencial", value: "Presencial" },
                   { label: "Monitoreado", value: "Monitoreado" },
