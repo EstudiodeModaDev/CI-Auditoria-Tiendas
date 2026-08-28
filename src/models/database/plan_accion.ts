@@ -5,7 +5,7 @@ export type planAccion = {
   id_zona: number | null,
   id_tienda: number | null,
   id_area_responsable: number | null,
-  responsable: number | null,
+  responsable: string,
   descripcion_hallazgo: string,
   impacto: string,
   actividad_correctiva: string,
