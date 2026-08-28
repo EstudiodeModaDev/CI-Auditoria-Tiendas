@@ -12,7 +12,7 @@ export function validateActionPlan(state: planAccion): planesErrors {
   if (!state.impacto) actionPlanErrors.impacto = 'Debe seleccionar el impacto de la tarea'
   if (!state.prioridad) actionPlanErrors.prioridad = 'Debe seleccionar la prioridad'
   if (!state.recursos_requeridos) actionPlanErrors.recursos_requeridos = 'Debe indicar que recursos requiere para realizarse'
-  if (!state.tipo_hallazgo) actionPlanErrors.tipo_hallazgo = 'Debe seleccionar un tipo de hallazgo'
+  if (!state.tipo_hallazgo || state.tipo_hallazgo.length === 0) actionPlanErrors.tipo_hallazgo = 'Debe seleccionar al menos un tipo de hallazgo'
 
   console.log(actionPlanErrors)
 

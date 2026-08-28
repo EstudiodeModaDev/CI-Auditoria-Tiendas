@@ -4,10 +4,12 @@ import type { auditor } from '../../models/database/auditor'
 import type { tienda } from '../../models/database/tienda'
 import type { zona } from '../../models/database/zona'
 import type { jefe_zona } from '../../models/database/jefe_zona'
+import type { areas_responsables } from '../../models/database/areas_responsables'
 import type { SelectOption } from '../../Funcionalidades/configs/tienda/hooks/useTiendaRelations'
 import { KpiCard } from '../commons/kpiCard'
 import { usePlanAccion } from '../../Funcionalidades/form-plan-accion/hooks/usePlanAccion'
 import { PlanAccionDetailModal } from './plan-accion-detail-modal'
+import { PlanAccionDetailedTableModal } from './plan-accion-detailed-table-modal'
 import type { planAccion } from '../../models/database/plan_accion'
 import Select from 'react-select'
 import { mapAuditorOption, mapTiendaOption, selectedOption } from '../../Funcionalidades/shared/react-select'
@@ -18,6 +20,7 @@ type PlanAccionHomeProps = {
   tiendas: tienda[]
   zonas: zona[]
   jefesZona: jefe_zona[]
+  areasResponsables: areas_responsables[]
   modalidades: SelectOption[]
   estadosInventario: SelectOption[]
 }
@@ -38,8 +41,10 @@ function formatPercentage(value: number) {
 function buildRecurringFindings(items: PlanAccionHomeProps['auditores'], rows: ReturnType<typeof usePlanAccion>['planAccionRows']) {
   void items
   const counts = rows.reduce<Record<string, number>>((acc, row) => {
-    const key = row.tipo_hallazgo || row.descripcion_hallazgo || 'Sin clasificar'
-    acc[key] = (acc[key] ?? 0) + 1
+    const keys = row.tipo_hallazgo?.length ? row.tipo_hallazgo : [row.descripcion_hallazgo || 'Sin clasificar']
+    keys.forEach((key) => {
+      acc[key] = (acc[key] ?? 0) + 1
+    })
     return acc
   }, {})
 
@@ -61,6 +66,7 @@ export function PlanAccionHome(props: PlanAccionHomeProps) {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [selectedPlan, setSelectedPlan] = React.useState<planAccion | null>(null)
+  const [isDetailedTableOpen, setIsDetailedTableOpen] = React.useState(false)
   const auditoresOption = React.useMemo(() => props.auditores.map((a) => {return mapAuditorOption(a)}), [props.auditores])
   const tiendasOptions = React.useMemo(() => props.tiendas.map((a) => {return mapTiendaOption(a)}), [props.tiendas])
 
@@ -197,6 +203,15 @@ export function PlanAccionHome(props: PlanAccionHomeProps) {
               <h2>Planes de accion</h2>
               <p>{planAccionController.total} registros encontrados</p>
             </div>
+
+            <button
+              className="plan-accion-page__ghost-button"
+              type="button"
+              onClick={() => setIsDetailedTableOpen(true)}
+              disabled={planAccionController.planAccionRows.length === 0}
+            >
+              Detallado
+            </button>
           </header>
 
           {!loading && !error && planAccionController.planAccionRows.length === 0 ? (
@@ -226,7 +241,7 @@ export function PlanAccionHome(props: PlanAccionHomeProps) {
                       <td>PA {plan.id_plan_accion ?? '-'}</td>
                       <td>
                         <div className="plan-accion-page__table-main">
-                          <strong>{plan.tipo_hallazgo || 'Sin tipo'}</strong>
+                          <strong>{plan.tipo_hallazgo?.length ? plan.tipo_hallazgo.join(', ') : 'Sin tipo'}</strong>
                           <span>{plan.descripcion_hallazgo || 'Sin descripcion'}</span>
                         </div>
                       </td>
@@ -321,8 +336,15 @@ export function PlanAccionHome(props: PlanAccionHomeProps) {
         onPlanUpdated={(updatedPlan) => {
           setSelectedPlan(updatedPlan)
           void planAccionController.loadPlanAccion()
-        } } 
-        tiendas={props.tiendas} 
+        } }
+        tiendas={props.tiendas}
+        auditores={props.auditores}      />
+
+      <PlanAccionDetailedTableModal
+        isOpen={isDetailedTableOpen}
+        onClose={() => setIsDetailedTableOpen(false)}
+        planes={planAccionController.planAccionRows}
+        tiendas={props.tiendas}
         auditores={props.auditores}      />
     </main>
   )

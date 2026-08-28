@@ -1,4 +1,5 @@
 import type { auditor } from "../../models/database/auditor"
+import type { jefe_zona } from "../../models/database/jefe_zona"
 import type { planAccion, planAccionSeguimiento } from "../../models/database/plan_accion"
 import type { tienda } from "../../models/database/tienda"
 import { enviarCorreo, type EnviarCorreoPayload } from "../../services/Mail.service"
@@ -7,9 +8,21 @@ import { formatDate } from "../shared/date"
 
 const mode=import.meta.env.VITE_SITE_MODE ?? "prod"
 
-export async function actionPlanReturnedNotification(plan: planAccion, causa: string, tienda: tienda, auditor: auditor) {
-  const auditorMail = mode === "prod" ? auditor.correo : "dpalacios@estudiodemoda.com.co" 
-  const tiendaMail = mode === "prod" ? tienda.correo_tienda : "dpalacios@estudiodemoda.com.co" 
+const CONTROL_INTERNO_CC_MAIL = "lmgonzalez@estudiodemoda.com.co"
+
+function buildCcRecipients(auditorMail: string, jefeZona?: jefe_zona | null) {
+  const jefeZonaMail = jefeZona ? (mode === "prod" ? jefeZona.correo : "dpalacios@estudiodemoda.com.co") : null
+
+  return [
+    { emailAddress: { address: auditorMail } },
+    ...(jefeZonaMail ? [{ emailAddress: { address: jefeZonaMail } }] : []),
+    ...(mode === "prod" ? [{ emailAddress: { address: CONTROL_INTERNO_CC_MAIL } }] : []),
+  ]
+}
+
+export async function actionPlanReturnedNotification(plan: planAccion, causa: string, tienda: tienda, auditor: auditor, jefeZona?: jefe_zona | null) {
+  const auditorMail = mode === "prod" ? auditor.correo : "dpalacios@estudiodemoda.com.co"
+  const tiendaMail = mode === "prod" ? tienda.correo_tienda : "dpalacios@estudiodemoda.com.co"
   const payload: EnviarCorreoPayload = {
     message: {
       body: {
@@ -78,17 +91,11 @@ export async function actionPlanReturnedNotification(plan: planAccion, causa: st
 
       </div>`
       },
-      ccRecipients: [
-        {emailAddress: {
-          address: auditorMail
-          
-          }
-        }
-      ],
+      ccRecipients: buildCcRecipients(auditorMail, jefeZona),
       toRecipients: [
-        {emailAddress :{  
+        {emailAddress :{
             address : tiendaMail
-        } 
+        }
       }
       ],
       subject: "Plan de acción devuelto"
@@ -99,9 +106,9 @@ export async function actionPlanReturnedNotification(plan: planAccion, causa: st
   await enviarCorreo(payload)
 }
 
-export async function actionPlanApprovedNotification(plan: planAccion, tienda: tienda, auditor: auditor) {
-  const auditorMail = mode === "prod" ? auditor.correo : "dpalacios@estudiodemoda.com.co" 
-  const tiendaMail = mode === "prod" ? tienda.correo_tienda : "dpalacios@estudiodemoda.com.co" 
+export async function actionPlanApprovedNotification(plan: planAccion, tienda: tienda, auditor: auditor, jefeZona?: jefe_zona | null) {
+  const auditorMail = mode === "prod" ? auditor.correo : "dpalacios@estudiodemoda.com.co"
+  const tiendaMail = mode === "prod" ? tienda.correo_tienda : "dpalacios@estudiodemoda.com.co"
   const payload: EnviarCorreoPayload = {
     message: {
       body: {
@@ -154,17 +161,11 @@ export async function actionPlanApprovedNotification(plan: planAccion, tienda: t
         </div>
         `
       },
-      ccRecipients: [
-        {emailAddress: {
-          address: auditorMail
-          
-          }
-        }
-      ],
+      ccRecipients: buildCcRecipients(auditorMail, jefeZona),
       toRecipients: [
-        {emailAddress :{  
+        {emailAddress :{
             address : tiendaMail
-        } 
+        }
       }
       ],
       subject: "Plan de acción aprobado"
@@ -175,9 +176,9 @@ export async function actionPlanApprovedNotification(plan: planAccion, tienda: t
   await enviarCorreo(payload)
 }
 
-export async function actionPlanCreatedNotification(plan: planAccion, tienda: tienda, auditor: auditor, area: string) {
-  const auditorMail = mode === "prod" ? auditor.correo : "dpalacios@estudiodemoda.com.co" 
-  const tiendaMail = mode === "prod" ? tienda.correo_tienda : "dpalacios@estudiodemoda.com.co" 
+export async function actionPlanCreatedNotification(plan: planAccion, tienda: tienda, auditor: auditor, area: string, jefeZona?: jefe_zona | null) {
+  const auditorMail = mode === "prod" ? auditor.correo : "dpalacios@estudiodemoda.com.co"
+  const tiendaMail = mode === "prod" ? tienda.correo_tienda : "dpalacios@estudiodemoda.com.co"
   const payload: EnviarCorreoPayload = {
     message: {
       body: {
@@ -257,17 +258,11 @@ export async function actionPlanCreatedNotification(plan: planAccion, tienda: ti
           </div>
         `
       },
-      ccRecipients: [
-        {emailAddress: {
-          address: auditorMail
-          
-          }
-        }
-      ],
+      ccRecipients: buildCcRecipients(auditorMail, jefeZona),
       toRecipients: [
-        {emailAddress :{  
+        {emailAddress :{
             address : tiendaMail
-        } 
+        }
       }
       ],
       subject: "Notificación creación de plan de acción"
@@ -361,11 +356,11 @@ export async function actionPlanUpdattedNotification(plan: planAccion, auditor: 
         contentType: "HTML",
         content: body
       },
-      ccRecipients: [ ],
+      ccRecipients: mode === "prod" ? [{ emailAddress: { address: CONTROL_INTERNO_CC_MAIL } }] : [],
       toRecipients: [
-        {emailAddress :{  
+        {emailAddress :{
             address : auditorMail
-        } 
+        }
       }
       ],
       subject: "Notificación actualización de plan de acción"

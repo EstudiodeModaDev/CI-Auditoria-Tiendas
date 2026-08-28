@@ -4,6 +4,13 @@ import type {
   UploadAttachmentResult,
 } from "./AttachmentsRepository";
 
+const COMBINING_DIACRITICS = new RegExp("[\\u0300-\\u036f]", "g");
+
+function sanitizeFileName(fileName: string): string {
+  const withoutAccents = fileName.normalize("NFD").replace(COMBINING_DIACRITICS, "");
+  return withoutAccents.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
 export class AttachmentsFromBucket implements AttachmentsRepository {
   async uploadAttachment(files: File[], bucket: string, basePath: string): Promise<UploadAttachmentResult[]> {
     if (!files.length) {
@@ -13,7 +20,7 @@ export class AttachmentsFromBucket implements AttachmentsRepository {
     const cleanBasePath = basePath.replace(/^\/+|\/+$/g, "");
 
     const uploads = files.map(async (file): Promise<UploadAttachmentResult> => {
-      const safeFileName = `${Date.now()}-${crypto.randomUUID()}-${file.name}`;
+      const safeFileName = `${Date.now()}-${crypto.randomUUID()}-${sanitizeFileName(file.name)}`;
       const path = `${cleanBasePath}/${safeFileName}`;
 
       try {

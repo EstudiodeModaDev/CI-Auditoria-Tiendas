@@ -13,6 +13,7 @@ import { mapCausalesOption, mapTiendaOption } from '../../Funcionalidades/shared
 import type { bodega } from '../../models/database/bodega'
 import { PlanAccionForm } from '../form-plan-accion/plan-accion-form'
 import { usePlanAccion } from '../../Funcionalidades/form-plan-accion/hooks/usePlanAccion'
+import { ConfirmModal } from '../commons/confirmModal'
 
 type FormProps = {
   auditoriaId?: number | null
@@ -36,9 +37,27 @@ export function Form(props: FormProps) {
   const auditoria = formState.auditoria
   const [isActionPlanModalOpen, setIsActionPlanModalOpen] = React.useState(false)
   const planAccionController = usePlanAccion()
+  const [showConfirmation, setShowConfirmation] = React.useState(false)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
+    const hasNonCompliantItem = formState.detalle.some((detalle) => detalle.cumple === false)
+
+    if (hasNonCompliantItem && planAccionController.plansToCreate.length === 0) {
+      toast.error('Debes crear al menos un plan de accion porque hay items que no cumplen.')
+      setIsActionPlanModalOpen(true)
+      return
+    }
+
+    setShowConfirmation(true)
+  }
+
+  async function confirmSubmit() {
+    setIsSubmitting(true)
+
+    try {
     const result = await handleSubmit()
 
     if(!result.ok) {
@@ -57,7 +76,11 @@ export function Form(props: FormProps) {
 
     toast.success('Formulario enviado correctamente.')
 
+    setShowConfirmation(false)
     handleReset()
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const filteredTiendas = React.useMemo(
@@ -152,15 +175,25 @@ export function Form(props: FormProps) {
         </form>
       </div>
 
+      <ConfirmModal 
+        isOpen={showConfirmation}
+        confirmText="Enviar auditoría"
+        isLoading={isSubmitting}
+        loadingText="Enviando..."
+        onSubmit={() => void confirmSubmit()}
+        title={"¿Esta seguro de que los datos estan bien?"} 
+        description={'Esto no sera reversible'} 
+        onClose={() => {setShowConfirmation(false)}} 
+          />
       <PlanAccionForm 
         isOpen={isActionPlanModalOpen}
-        onClose={() => setIsActionPlanModalOpen(false)} 
-        zonaOptions={props.zonas} 
-        causalesOptions={props.causales.map((c) => {return mapCausalesOption(c)})} 
-        tiendas={props.tiendas_originales} 
+        onClose={() => setIsActionPlanModalOpen(false)}
+        zonaOptions={props.zonas}
+        causalesOptions={props.causales.map((c) => { return mapCausalesOption(c) })}
+        tiendas={props.tiendas_originales}
         areasResponsables={props.areasResponsables}
-        controller={planAccionController}
-      />
+        controller={planAccionController} 
+        auditoria={auditoria}      />
     </main>
   )
 }

@@ -1,11 +1,11 @@
-import { startTransition, useDeferredValue, useState } from 'react'
+import { startTransition, useDeferredValue, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import './list-config-page.css'
 import { ConfigSidebar } from './sidebar'
-import type { ItemMap, ListDefinition, ListItem } from '../../models/components/config'
+import type { ItemMap, ListItem } from '../../models/components/config'
 import { ListItemCard } from './Card'
 import { validateSession } from '../../auth/supabase.session.validation'
 import { useNavigate } from 'react-router'
-import React from 'react'
 import type { auditor } from '../../models/database/auditor'
 import type { zona } from '../../models/database/zona'
 import type { jefe_zona } from '../../models/database/jefe_zona'
@@ -33,9 +33,19 @@ import { BodegaModal } from './modals/bodega-modal'
 import { ItemEvaluacionModal } from './modals/item-evaluacion-modal'
 import { TipoTiendaModal } from './modals/tipo-tienda-modal'
 import { TiendaModal } from './modals/tienda-modal'
+import type { TiendaFormState, TiendaRelationOptions } from './modals/tienda-modal'
 import { MarcaModal } from './modals/marca-modal'
+import type { MarcaFormState } from './modals/marca-modal'
 import { CausalModal } from './modals/causal-modal'
+import type { CausalFormState } from './modals/causal-modal'
 import { AreaResponsableModal } from './modals/area-responsable-modal'
+import type { AreaResponsableFormState } from './modals/area-responsable-modal'
+import type { AuditorFormState } from './modals/auditor-modal'
+import type { ZonaFormState } from './modals/zona-modal'
+import type { JefeZonaFormState } from './modals/jefe-zona-modal'
+import type { BodegaFormState } from './modals/bodega-modal'
+import type { ItemEvaluacionFormState } from './modals/item-evaluacion-modal'
+import type { TipoTiendaFormState } from './modals/tipo-tienda-modal'
 import { useAuditor } from '../../Funcionalidades/configs/auditor/hooks/useAuditor'
 import { useZona } from '../../Funcionalidades/configs/zonas/hooks/useAuditor'
 import { useJefeZona } from '../../Funcionalidades/configs/jefe-zona/hooks/useAuditor'
@@ -47,77 +57,56 @@ import { useTiendaRelations } from '../../Funcionalidades/configs/tienda/hooks/u
 import { useMarca } from '../../Funcionalidades/configs/marca/hooks/useMarca'
 import { useCausal } from '../../Funcionalidades/configs/causales/hooks/useCausal'
 import { useCausalRelations } from '../../Funcionalidades/configs/causales/hooks/useCausalRelations'
+import type { CausalSelectOption } from '../../Funcionalidades/configs/causales/hooks/useCausalRelations'
 import { useAreaResponsable } from '../../Funcionalidades/configs/area_responsable/hooks/useAreaResponsable'
 import toast from 'react-hot-toast'
-import type { AuditorFormState } from './modals/auditor-modal'
-import type { ZonaFormState } from './modals/zona-modal'
-import type { JefeZonaFormState } from './modals/jefe-zona-modal'
-import type { BodegaFormState } from './modals/bodega-modal'
-import type { ItemEvaluacionFormState } from './modals/item-evaluacion-modal'
-import type { TipoTiendaFormState } from './modals/tipo-tienda-modal'
-import type { TiendaFormState, TiendaRelationOptions } from './modals/tienda-modal'
-import type { MarcaFormState } from './modals/marca-modal'
-import type { CausalFormState } from './modals/causal-modal'
-import type { AreaResponsableFormState } from './modals/area-responsable-modal'
-import type { CausalSelectOption } from '../../Funcionalidades/configs/causales/hooks/useCausalRelations'
 import { ConfirmModal } from '../commons/confirmModal'
+import {
+  entityNoun,
+  entityWithArticle,
+  entityWithDePrefix,
+  listDefinitions,
+  type EntityId,
+} from './entity-config'
 
+// Los miembros con datos de entidad se declaran con sintaxis de metodo
+// (`mapper(...)`, no `mapper: (...) =>`) a proposito: TypeScript compara los
+// parametros de un metodo de forma bivariante, lo que permite que cada fila
+// de `entityAdapters` use el tipo concreto de su propia entidad (auditor,
+// zona, tienda...) en vez de forzar todo a traves de `any`.
+type EntityAdapter = {
+  mapper(raw: unknown): ListItem
+  Modal(props: Record<string, unknown>): ReactNode
+  getId(raw: unknown): string
+  loadList(): Promise<{ ok: boolean; errorMessage?: string | null; data?: unknown[] | null } | undefined>
+  loadSingle(id: string): Promise<{ ok: boolean; errorMessage?: string | null; data?: unknown | null }>
+  create(payload: unknown): Promise<boolean>
+  edit(id: string, payload: unknown): Promise<boolean>
+  deactivate(id: string): Promise<boolean>
+  activate(id: string): Promise<boolean>
+  isSaving: boolean
+  isLoadingRelations?: boolean
+  prepareRelations?(): Promise<boolean>
+  extraModalProps?: Record<string, unknown>
+  // false cuando la activacion/desactivacion de esta entidad no debe hacerse
+  // manualmente (p.ej. bodegas, que se desactivan automaticamente junto con
+  // su tienda).
+  canDeactivate?: boolean
+  cannotDeactivateReason?: string
+}
 
-const listDefinitions: ListDefinition[] = [
-  {
-    id: 'auditores',
-    name: 'Auditores',
-    shortName: 'AU',
-  },
-  {
-    id: 'causales',
-    name: 'Causales',
-    shortName: 'CA',
-  },
-  {
-    id: 'zonas',
-    name: 'Zonas',
-    shortName: 'ZN',
-  },
-  {
-    id: 'jefes-zona',
-    name: 'Jefes de zona',
-    shortName: 'JZ',
-  },
-  {
-    id: 'tiendas',
-    name: 'Tiendas',
-    shortName: 'TD',
-  },
-  {
-    id: 'tipos-tienda',
-    name: 'Tipos de tienda',
-    shortName: 'TT',
-  },
-  {
-    id: 'marcas',
-    name: 'Marcas',
-    shortName: 'MK',
-  },
-  {
-    id: 'bodegas',
-    name: 'Bodegas',
-    shortName: 'BG',
-  },
-  {
-    id: 'areas-responsables',
-    name: 'Areas responsables',
-    shortName: 'AR',
-  },
-  {
-    id: 'items-evaluacion',
-    name: 'Items de evaluacion',
-    shortName: 'IE',
-  },
-]
+function isEntityBusy(adapter: EntityAdapter) {
+  return adapter.isSaving || Boolean(adapter.isLoadingRelations)
+}
+
+type ModalState = {
+  entityId: EntityId
+  mode: 'create' | 'edit'
+  data: unknown
+}
 
 export function ListConfigPage() {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
   const auditorController = useAuditor()
   const causalController = useCausal()
   const causalRelationsController = useCausalRelations()
@@ -130,6 +119,7 @@ export function ListConfigPage() {
   const tiendaController = useTienda()
   const tiendaRelationsController = useTiendaRelations()
   const areaResponsableController = useAreaResponsable()
+
   const [itemsByList, setItemsByList] = useState<ItemMap>({
     zonas: [],
     'jefes-zona': [],
@@ -140,55 +130,17 @@ export function ListConfigPage() {
     'areas-responsables': [],
     'items-evaluacion': [],
     auditores: [],
-    causales: []
+    causales: [],
   })
   const [selectedListId, setSelectedListId] = useState<string>(listDefinitions[0].id)
   const [search, setSearch] = useState('')
-  const [activeItemId, setActiveItemId] = useState<string>("")
+  const [activeItemId, setActiveItemId] = useState<string>('')
   const [isLogged, setIsLogged] = useState<boolean>(true)
-  const [isAuditorModalOpen, setIsAuditorModalOpen] = useState(false)
-  const [auditorModalMode, setAuditorModalMode] = useState<'create' | 'edit'>('create')
-  const [selectedAuditor, setSelectedAuditor] = useState<auditor | null>(null)
-  const [auditorModalError, setAuditorModalError] = useState<string | null>(null)
-  const [isZonaModalOpen, setIsZonaModalOpen] = useState(false)
-  const [zonaModalMode, setZonaModalMode] = useState<'create' | 'edit'>('create')
-  const [selectedZona, setSelectedZona] = useState<zona | null>(null)
-  const [zonaModalError, setZonaModalError] = useState<string | null>(null)
-  const [isCausalModalOpen, setIsCausalModalOpen] = useState(false)
-  const [causalModalMode, setCausalModalMode] = useState<'create' | 'edit'>('create')
-  const [selectedCausal, setSelectedCausal] = useState<causal | null>(null)
-  const [causalModalError, setCausalModalError] = useState<string | null>(null)
-  const [causalItemOptions, setCausalItemOptions] = useState<CausalSelectOption[]>([])
+  const [modal, setModal] = useState<ModalState | null>(null)
+  const [modalError, setModalError] = useState<string | null>(null)
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
   const [pendingDeleteItem, setPendingDeleteItem] = useState<ListItem | null>(null)
-  const [isJefeZonaModalOpen, setIsJefeZonaModalOpen] = useState(false)
-  const [jefeZonaModalMode, setJefeZonaModalMode] = useState<'create' | 'edit'>('create')
-  const [selectedJefeZona, setSelectedJefeZona] = useState<jefe_zona | null>(null)
-  const [jefeZonaModalError, setJefeZonaModalError] = useState<string | null>(null)
-  const [isBodegaModalOpen, setIsBodegaModalOpen] = useState(false)
-  const [bodegaModalMode, setBodegaModalMode] = useState<'create' | 'edit'>('create')
-  const [selectedBodega, setSelectedBodega] = useState<bodega | null>(null)
-  const [bodegaModalError, setBodegaModalError] = useState<string | null>(null)
-  const [isItemEvaluacionModalOpen, setIsItemEvaluacionModalOpen] = useState(false)
-  const [itemEvaluacionModalMode, setItemEvaluacionModalMode] = useState<'create' | 'edit'>('create')
-  const [selectedItemEvaluacion, setSelectedItemEvaluacion] = useState<item_evaluacion | null>(null)
-  const [itemEvaluacionModalError, setItemEvaluacionModalError] = useState<string | null>(null)
-  const [isTipoTiendaModalOpen, setIsTipoTiendaModalOpen] = useState(false)
-  const [tipoTiendaModalMode, setTipoTiendaModalMode] = useState<'create' | 'edit'>('create')
-  const [selectedTipoTienda, setSelectedTipoTienda] = useState<tipo_tienda | null>(null)
-  const [tipoTiendaModalError, setTipoTiendaModalError] = useState<string | null>(null)
-  const [isMarcaModalOpen, setIsMarcaModalOpen] = useState(false)
-  const [marcaModalMode, setMarcaModalMode] = useState<'create' | 'edit'>('create')
-  const [selectedMarca, setSelectedMarca] = useState<marca | null>(null)
-  const [marcaModalError, setMarcaModalError] = useState<string | null>(null)
-  const [isTiendaModalOpen, setIsTiendaModalOpen] = useState(false)
-  const [tiendaModalMode, setTiendaModalMode] = useState<'create' | 'edit'>('create')
-  const [selectedTienda, setSelectedTienda] = useState<tienda | null>(null)
-  const [tiendaModalError, setTiendaModalError] = useState<string | null>(null)
-  const [isAreaResponsableModalOpen, setIsAreaResponsableModalOpen] = useState(false)
-  const [areaResponsableModalMode, setAreaResponsableModalMode] = useState<'create' | 'edit'>('create')
-  const [selectedAreaResponsable, setSelectedAreaResponsable] = useState<areas_responsables | null>(null)
-  const [areaResponsableModalError, setAreaResponsableModalError] = useState<string | null>(null)
+  const [causalItemOptions, setCausalItemOptions] = useState<CausalSelectOption[]>([])
   const [tiendaRelationOptions, setTiendaRelationOptions] = useState<TiendaRelationOptions>({
     zonas: [],
     jefesZona: [],
@@ -205,894 +157,6 @@ export function ListConfigPage() {
     const haystack = `${item.title} ${item.subtitle} ${item.summary} ${item.status}`.toLowerCase()
     return haystack.includes(deferredSearch.trim().toLowerCase())
   })
-
-  async function openCreateForm() {
-    if (selectedListId === 'auditores') {
-      setActiveItemId('')
-      setSelectedAuditor(null)
-      setAuditorModalMode('create')
-      setAuditorModalError(null)
-      setIsAuditorModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'zonas') {
-      setActiveItemId('')
-      setSelectedZona(null)
-      setZonaModalMode('create')
-      setZonaModalError(null)
-      setIsZonaModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'causales') {
-      setActiveItemId('')
-      setSelectedCausal(null)
-      setCausalModalMode('create')
-      setCausalModalError(null)
-      const loaded = await prepareCausalRelations()
-
-      if (!loaded) {
-        return
-      }
-
-      setIsCausalModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'jefes-zona') {
-      setActiveItemId('')
-      setSelectedJefeZona(null)
-      setJefeZonaModalMode('create')
-      setJefeZonaModalError(null)
-      setIsJefeZonaModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'tiendas') {
-      setActiveItemId('')
-      setSelectedTienda(null)
-      setTiendaModalMode('create')
-      setTiendaModalError(null)
-      const loaded = await prepareTiendaRelations()
-
-      if (!loaded) {
-        return
-      }
-
-      setIsTiendaModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'marcas') {
-      setActiveItemId('')
-      setSelectedMarca(null)
-      setMarcaModalMode('create')
-      setMarcaModalError(null)
-      setIsMarcaModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'bodegas') {
-      setActiveItemId('')
-      setSelectedBodega(null)
-      setBodegaModalMode('create')
-      setBodegaModalError(null)
-      setIsBodegaModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'areas-responsables') {
-      setActiveItemId('')
-      setSelectedAreaResponsable(null)
-      setAreaResponsableModalMode('create')
-      setAreaResponsableModalError(null)
-      setIsAreaResponsableModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'items-evaluacion') {
-      setActiveItemId('')
-      setSelectedItemEvaluacion(null)
-      setItemEvaluacionModalMode('create')
-      setItemEvaluacionModalError(null)
-      setIsItemEvaluacionModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'tipos-tienda') {
-      setActiveItemId('')
-      setSelectedTipoTienda(null)
-      setTipoTiendaModalMode('create')
-      setTipoTiendaModalError(null)
-      setIsTipoTiendaModalOpen(true)
-    }
-  }
-
-  async function openEditForm(item: ListItem) {
-    if (selectedListId === 'auditores') {
-      setActiveItemId(item.id)
-      setAuditorModalError(null)
-
-      const response = await auditorController.loadAuditor(item.id)
-
-      if (!response.ok || !response.data) {
-        toast.error(response.errorMessage ?? 'No fue posible cargar el auditor.')
-        setSelectedAuditor(null)
-        setAuditorModalMode('edit')
-        setIsAuditorModalOpen(true)
-        return
-      }
-
-      setSelectedAuditor(response.data)
-      setAuditorModalMode('edit')
-      setIsAuditorModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'zonas') {
-      setActiveItemId(item.id)
-      setZonaModalError(null)
-
-      const response = await zonaController.loadAuditor(item.id)
-
-      if (!response.ok || !response.data) {
-        toast.error(response.errorMessage ?? 'No fue posible cargar la zona.')
-        setSelectedZona(null)
-        setZonaModalMode('edit')
-        setIsZonaModalOpen(true)
-        return
-      }
-
-      setSelectedZona(response.data)
-      setZonaModalMode('edit')
-      setIsZonaModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'causales') {
-      setActiveItemId(item.id)
-      setCausalModalError(null)
-      const loaded = await prepareCausalRelations()
-
-      if (!loaded) {
-        return
-      }
-
-      const response = await causalController.loadCausal(item.id)
-
-      if (!response.ok || !response.data) {
-        toast.error(response.errorMessage ?? 'No fue posible cargar la causal.')
-        setSelectedCausal(null)
-        setCausalModalMode('edit')
-        setIsCausalModalOpen(true)
-        return
-      }
-
-      setSelectedCausal(response.data)
-      setCausalModalMode('edit')
-      setIsCausalModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'jefes-zona') {
-      setActiveItemId(item.id)
-      setJefeZonaModalError(null)
-
-      const response = await jefeZonaController.loadJefeZona(item.id)
-
-      if (!response.ok || !response.data) {
-        toast.error(response.errorMessage ?? 'No fue posible cargar el jefe de zona.')
-        setSelectedJefeZona(null)
-        setJefeZonaModalMode('edit')
-        setIsJefeZonaModalOpen(true)
-        return
-      }
-
-      setSelectedJefeZona(response.data)
-      setJefeZonaModalMode('edit')
-      setIsJefeZonaModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'tiendas') {
-      setActiveItemId(item.id)
-      setTiendaModalError(null)
-      const loaded = await prepareTiendaRelations()
-
-      if (!loaded) {
-        return
-      }
-
-      const response = await tiendaController.loadTienda(item.id)
-
-      if (!response.ok || !response.data) {
-        toast.error(response.errorMessage ?? 'No fue posible cargar la tienda.')
-        setSelectedTienda(null)
-        setTiendaModalMode('edit')
-        setIsTiendaModalOpen(true)
-        return
-      }
-
-      setSelectedTienda(response.data)
-      setTiendaModalMode('edit')
-      setIsTiendaModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'marcas') {
-      setActiveItemId(item.id)
-      setMarcaModalError(null)
-
-      const response = await marcaController.loadMarca(item.id)
-
-      if (!response.ok || !response.data) {
-        toast.error(response.errorMessage ?? 'No fue posible cargar la marca.')
-        setSelectedMarca(null)
-        setMarcaModalMode('edit')
-        setIsMarcaModalOpen(true)
-        return
-      }
-
-      setSelectedMarca(response.data)
-      setMarcaModalMode('edit')
-      setIsMarcaModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'bodegas') {
-      setActiveItemId(item.id)
-      setBodegaModalError(null)
-
-      const response = await bodegaController.loadBodega(item.id)
-
-      if (!response.ok || !response.data) {
-        toast.error(response.errorMessage ?? 'No fue posible cargar la bodega.')
-        setSelectedBodega(null)
-        setBodegaModalMode('edit')
-        setIsBodegaModalOpen(true)
-        return
-      }
-
-      setSelectedBodega(response.data)
-      setBodegaModalMode('edit')
-      setIsBodegaModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'areas-responsables') {
-      setActiveItemId(item.id)
-      setAreaResponsableModalError(null)
-
-      const response = await areaResponsableController.loadAreaResponsable(item.id)
-
-      if (!response.ok || !response.data) {
-        toast.error(response.errorMessage ?? 'No fue posible cargar el area responsable.')
-        setSelectedAreaResponsable(null)
-        setAreaResponsableModalMode('edit')
-        setIsAreaResponsableModalOpen(true)
-        return
-      }
-
-      setSelectedAreaResponsable(response.data)
-      setAreaResponsableModalMode('edit')
-      setIsAreaResponsableModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'items-evaluacion') {
-      setActiveItemId(item.id)
-      setItemEvaluacionModalError(null)
-
-      const response = await itemEvaluacionController.loadItemEvaluacion(item.id)
-
-      if (!response.ok || !response.data) {
-        toast.error(response.errorMessage ?? 'No fue posible cargar el item de evaluacion.')
-        setSelectedItemEvaluacion(null)
-        setItemEvaluacionModalMode('edit')
-        setIsItemEvaluacionModalOpen(true)
-        return
-      }
-
-      setSelectedItemEvaluacion(response.data)
-      setItemEvaluacionModalMode('edit')
-      setIsItemEvaluacionModalOpen(true)
-      return
-    }
-
-    if (selectedListId === 'tipos-tienda') {
-      setActiveItemId(item.id)
-      setTipoTiendaModalError(null)
-
-      const response = await tipoTiendaController.loadTipoTienda(item.id)
-
-      if (!response.ok || !response.data) {
-        toast.error(response.errorMessage ?? 'No fue posible cargar el tipo de tienda.')
-        setSelectedTipoTienda(null)
-        setTipoTiendaModalMode('edit')
-        setIsTipoTiendaModalOpen(true)
-        return
-      }
-
-      setSelectedTipoTienda(response.data)
-      setTipoTiendaModalMode('edit')
-      setIsTipoTiendaModalOpen(true)
-    }
-  }
-
-  function closeAuditorModal() {
-    if (auditorController.loading) {
-      return
-    }
-
-    setIsAuditorModalOpen(false)
-    setAuditorModalError(null)
-    setSelectedAuditor(null)
-  }
-
-  function closeZonaModal() {
-    if (zonaController.loading) {
-      return
-    }
-
-    setIsZonaModalOpen(false)
-    setZonaModalError(null)
-    setSelectedZona(null)
-  }
-
-  function closeCausalModal() {
-    if (causalController.loading || causalRelationsController.loading) {
-      return
-    }
-
-    setIsCausalModalOpen(false)
-    setCausalModalError(null)
-    setSelectedCausal(null)
-  }
-
-  function closeJefeZonaModal() {
-    if (jefeZonaController.loading) {
-      return
-    }
-
-    setIsJefeZonaModalOpen(false)
-    setJefeZonaModalError(null)
-    setSelectedJefeZona(null)
-  }
-
-  function closeBodegaModal() {
-    if (bodegaController.loading) {
-      return
-    }
-
-    setIsBodegaModalOpen(false)
-    setBodegaModalError(null)
-    setSelectedBodega(null)
-  }
-
-  function closeAreaResponsableModal() {
-    if (areaResponsableController.loading) {
-      return
-    }
-
-    setIsAreaResponsableModalOpen(false)
-    setAreaResponsableModalError(null)
-    setSelectedAreaResponsable(null)
-  }
-
-  function closeMarcaModal() {
-    if (marcaController.loading) {
-      return
-    }
-
-    setIsMarcaModalOpen(false)
-    setMarcaModalError(null)
-    setSelectedMarca(null)
-  }
-
-  function closeTiendaModal() {
-    if (tiendaController.loading || tiendaRelationsController.loading) {
-      return
-    }
-
-    setIsTiendaModalOpen(false)
-    setTiendaModalError(null)
-    setSelectedTienda(null)
-  }
-
-  function closeItemEvaluacionModal() {
-    if (itemEvaluacionController.loading) {
-      return
-    }
-
-    setIsItemEvaluacionModalOpen(false)
-    setItemEvaluacionModalError(null)
-    setSelectedItemEvaluacion(null)
-  }
-
-  function closeTipoTiendaModal() {
-    if (tipoTiendaController.loading) {
-      return
-    }
-
-    setIsTipoTiendaModalOpen(false)
-    setTipoTiendaModalError(null)
-    setSelectedTipoTienda(null)
-  }
-
-  async function handleAuditorSubmit(payload: AuditorFormState) {
-    setAuditorModalError(null)
-
-    const response =
-      auditorModalMode === 'create'
-        ? await auditorController.createAuditor(payload)
-        : await auditorController.editAuditor(String(selectedAuditor?.id_auditor ?? ''), payload)
-
-    if (!response) {
-      setAuditorModalError('No fue posible guardar la informacion del auditor.')
-      return
-    }
-
-    await loadAuditores()
-    closeAuditorModal()
-  }
-
-  async function handleZonaSubmit(payload: ZonaFormState) {
-    setZonaModalError(null)
-
-    const response =
-      zonaModalMode === 'create'
-        ? await zonaController.createZona(payload)
-        : await zonaController.editZona(String(selectedZona?.id_zona ?? ''), payload)
-
-    if (!response) {
-      setZonaModalError('No fue posible guardar la informacion de la zona.')
-      return
-    }
-
-    await loadZonas()
-    closeZonaModal()
-  }
-
-  async function handleCausalSubmit(payload: CausalFormState) {
-    setCausalModalError(null)
-
-    const response =
-      causalModalMode === 'create'
-        ? await causalController.createCausal(payload)
-        : await causalController.editCausal(String(selectedCausal?.id_causal ?? ''), payload)
-
-    if (!response) {
-      setCausalModalError('No fue posible guardar la informacion de la causal.')
-      return
-    }
-
-    await loadCausales()
-    closeCausalModal()
-  }
-
-  async function handleJefeZonaSubmit(payload: JefeZonaFormState) {
-    setJefeZonaModalError(null)
-
-    const response =
-      jefeZonaModalMode === 'create'
-        ? await jefeZonaController.createJefeZona(payload)
-        : await jefeZonaController.editJefeZona(String(selectedJefeZona?.id_jefe_zona ?? ''), payload)
-
-    if (!response) {
-      setJefeZonaModalError('No fue posible guardar la informacion del jefe de zona.')
-      return
-    }
-
-    await loadJefesZona()
-    closeJefeZonaModal()
-  }
-
-  async function handleBodegaSubmit(payload: BodegaFormState) {
-    setBodegaModalError(null)
-
-    const response =
-      bodegaModalMode === 'create'
-        ? await bodegaController.createBodega(payload)
-        : await bodegaController.editBodega(String(selectedBodega?.id_bodega ?? ''), payload)
-
-    if (!response) {
-      setBodegaModalError('No fue posible guardar la informacion de la bodega.')
-      return
-    }
-
-    await loadBodegas()
-    closeBodegaModal()
-  }
-
-  async function handleAreaResponsableSubmit(payload: AreaResponsableFormState) {
-    setAreaResponsableModalError(null)
-
-    const response =
-      areaResponsableModalMode === 'create'
-        ? await areaResponsableController.createAreaResponsable(payload)
-        : await areaResponsableController.editAreaResponsable(String(selectedAreaResponsable?.id_area_responsable ?? ''), payload)
-
-    if (!response) {
-      setAreaResponsableModalError('No fue posible guardar la informacion del area responsable.')
-      return
-    }
-
-    await loadAreasResponsables()
-    closeAreaResponsableModal()
-  }
-
-  async function handleMarcaSubmit(payload: MarcaFormState) {
-    setMarcaModalError(null)
-
-    const response =
-      marcaModalMode === 'create'
-        ? await marcaController.createMarca(payload)
-        : await marcaController.editMarca(String(selectedMarca?.id_marca ?? ''), payload)
-
-    if (!response) {
-      setMarcaModalError('No fue posible guardar la informacion de la marca.')
-      return
-    }
-
-    await loadMarcas()
-    closeMarcaModal()
-  }
-
-  async function handleTiendaSubmit(payload: TiendaFormState) {
-    setTiendaModalError(null)
-
-    const response =
-      tiendaModalMode === 'create'
-        ? await tiendaController.createTienda(payload)
-        : await tiendaController.editTienda(String(selectedTienda?.id_tienda ?? ''), payload)
-
-    if (!response) {
-      setTiendaModalError('No fue posible guardar la informacion de la tienda.')
-      return
-    }
-
-    await loadTiendas()
-    closeTiendaModal()
-  }
-
-  async function handleItemEvaluacionSubmit(payload: ItemEvaluacionFormState) {
-    setItemEvaluacionModalError(null)
-
-    const response =
-      itemEvaluacionModalMode === 'create'
-        ? await itemEvaluacionController.createItemEvaluacion(payload)
-        : await itemEvaluacionController.editItemEvaluacion(String(selectedItemEvaluacion?.id_item_evaluacion ?? ''), payload)
-
-    if (!response) {
-      setItemEvaluacionModalError('No fue posible guardar la informacion del item de evaluacion.')
-      return
-    }
-
-    await loadItemsEvaluacion()
-    closeItemEvaluacionModal()
-  }
-
-  async function handleTipoTiendaSubmit(payload: TipoTiendaFormState) {
-    setTipoTiendaModalError(null)
-
-    const response =
-      tipoTiendaModalMode === 'create'
-        ? await tipoTiendaController.createTipoTienda(payload)
-        : await tipoTiendaController.editTipoTienda(String(selectedTipoTienda?.id_tipo_tienda ?? ''), payload)
-
-    if (!response) {
-      setTipoTiendaModalError('No fue posible guardar la informacion del tipo de tienda.')
-      return
-    }
-
-    await loadTiposTienda()
-    closeTipoTiendaModal()
-  }
-
-  async function handleDelete(item: ListItem) {
-    setPendingDeleteItem(item)
-    setIsConfirmModalOpen(true)
-  }
-
-  function closeConfirmModal() {
-    if (
-      auditorController.loading ||
-      causalController.loading ||
-      zonaController.loading ||
-      jefeZonaController.loading ||
-      tiendaController.loading ||
-      marcaController.loading ||
-      bodegaController.loading ||
-      areaResponsableController.loading ||
-      itemEvaluacionController.loading ||
-      tipoTiendaController.loading
-    ) {
-      return
-    }
-
-    setIsConfirmModalOpen(false)
-    setPendingDeleteItem(null)
-  }
-
-  async function confirmDelete() {
-    if (!pendingDeleteItem) {
-      return
-    }
-
-    if (selectedListId === 'auditores') {
-      const response = await auditorController.desactivateAuditor(pendingDeleteItem.id)
-
-      if (!response) {
-        toast.error('No fue posible desactivar el auditor.')
-        return
-      }
-
-      await loadAuditores()
-      closeConfirmModal()
-      return
-    }
-
-    if (selectedListId === 'zonas') {
-      const response = await zonaController.desactivateZona(pendingDeleteItem.id)
-
-      if (!response) {
-        toast.error('No fue posible desactivar la zona.')
-        return
-      }
-
-      await loadZonas()
-      closeConfirmModal()
-      return
-    }
-
-    if (selectedListId === 'causales') {
-      const response = await causalController.desactivateCausal(pendingDeleteItem.id)
-
-      if (!response) {
-        toast.error('No fue posible desactivar la causal.')
-        return
-      }
-
-      await loadCausales()
-      closeConfirmModal()
-      return
-    }
-
-    if (selectedListId === 'jefes-zona') {
-      const response = await jefeZonaController.desactivateJefeZona(pendingDeleteItem.id)
-
-      if (!response) {
-        toast.error('No fue posible desactivar el jefe de zona.')
-        return
-      }
-
-      await loadJefesZona()
-      closeConfirmModal()
-      return
-    }
-
-    if (selectedListId === 'tiendas') {
-      const response = await tiendaController.desactivateTienda(pendingDeleteItem.id)
-
-      if (!response) {
-        toast.error('No fue posible desactivar la tienda.')
-        return
-      }
-
-      await loadTiendas()
-      closeConfirmModal()
-      return
-    }
-
-    if (selectedListId === 'marcas') {
-      const response = await marcaController.desactivateMarca(pendingDeleteItem.id)
-
-      if (!response) {
-        toast.error('No fue posible desactivar la marca.')
-        return
-      }
-
-      await loadMarcas()
-      closeConfirmModal()
-      return
-    }
-
-    if (selectedListId === 'bodegas') {
-      const response = await bodegaController.desactivateBodega(pendingDeleteItem.id)
-
-      if (!response) {
-        toast.error('No fue posible desactivar la bodega.')
-        return
-      }
-
-      await loadBodegas()
-      closeConfirmModal()
-      return
-    }
-
-    if (selectedListId === 'areas-responsables') {
-      const response = await areaResponsableController.desactivateAreaResponsable(pendingDeleteItem.id)
-
-      if (!response) {
-        toast.error('No fue posible desactivar el area responsable.')
-        return
-      }
-
-      await loadAreasResponsables()
-      closeConfirmModal()
-      return
-    }
-
-    if (selectedListId === 'items-evaluacion') {
-      const response = await itemEvaluacionController.desactivateItemValuacion(pendingDeleteItem.id)
-
-      if (!response) {
-        toast.error('No fue posible desactivar el item de evaluacion.')
-        return
-      }
-
-      await loadItemsEvaluacion()
-      closeConfirmModal()
-      return
-    }
-
-    if (selectedListId === 'tipos-tienda') {
-      const response = await tipoTiendaController.desactivateTipoTienda(pendingDeleteItem.id)
-
-      if (!response) {
-        toast.error('No fue posible desactivar el tipo de tienda.')
-        return
-      }
-
-      await loadTiposTienda()
-      closeConfirmModal()
-    }
-  }
-
-  async function loadAuditores() {
-    const response = await auditorController.loadAuditores(search)
-
-    if (!response || !response.ok) {
-      toast.error(response?.errorMessage ?? 'No fue posible cargar auditores')
-      return
-    }
-
-    const auditores = response.data?.map(mapAuditorToListItem)
-
-    setItemsByList((current) => ({
-      ...current,
-      auditores,
-    }))
-  }
-
-  async function loadZonas() {
-    const response = await zonaController.loadZonas(search)
-
-    if (!response || !response.ok) {
-      toast.error(response?.errorMessage ?? 'No fue posible cargar zonas')
-      return
-    }
-
-    const zonas = response.data?.map(mapZonaToListItem)
-
-    setItemsByList((current) => ({
-      ...current,
-      zonas,
-    }))
-  }
-
-  async function loadCausales() {
-    const response = await causalController.loadCausales(search)
-
-    if (!response || !response.ok) {
-      toast.error(response?.errorMessage ?? 'No fue posible cargar causales')
-      return
-    }
-
-    const causales = response.data?.map(mapCausalToListItem)
-
-    setItemsByList((current) => ({
-      ...current,
-      causales,
-    }))
-  }
-
-  async function loadJefesZona() {
-    const response = await jefeZonaController.loadJefesZona(search)
-
-    if (!response || !response.ok) {
-      toast.error(response?.errorMessage ?? 'No fue posible cargar jefes de zona')
-      return
-    }
-
-    const jefesZona = response.data?.map(mapJefeZonaToListItem)
-
-    setItemsByList((current) => ({
-      ...current,
-      'jefes-zona': jefesZona,
-    }))
-  }
-
-  async function loadTiendas() {
-    const response = await tiendaController.loadTiendas(search)
-
-    if (!response || !response.ok) {
-      toast.error(response?.errorMessage ?? 'No fue posible cargar tiendas')
-      return
-    }
-
-    const tiendas = response.data?.map(mapTiendaToListItem)
-
-    setItemsByList((current) => ({
-      ...current,
-      tiendas,
-    }))
-  }
-
-  async function loadMarcas() {
-    const response = await marcaController.loadMarcas(search)
-
-    if (!response || !response.ok) {
-      toast.error(response?.errorMessage ?? 'No fue posible cargar marcas')
-      return
-    }
-
-    const marcas = response.data?.map(mapMarcaToListItem)
-
-    setItemsByList((current) => ({
-      ...current,
-      marcas,
-    }))
-  }
-
-  async function loadBodegas() {
-    const response = await bodegaController.loadBodegas(search)
-
-    if (!response || !response.ok) {
-      toast.error(response?.errorMessage ?? 'No fue posible cargar bodegas')
-      return
-    }
-
-    const bodegas = response.data?.map(mapBodegaToItemList)
-
-    setItemsByList((current) => ({
-      ...current,
-      bodegas,
-    }))
-  }
-
-  async function loadAreasResponsables() {
-    const response = await areaResponsableController.loadAreasResponsable(search)
-
-    if (!response || !response.ok) {
-      toast.error(response?.errorMessage ?? 'No fue posible cargar areas responsables')
-      return
-    }
-
-    const areasResponsables = response.data?.map(mapAreaResponsableToListItem)
-
-    setItemsByList((current) => ({
-      ...current,
-      'areas-responsables': areasResponsables,
-    }))
-  }
-
-  async function loadItemsEvaluacion() {
-    const response = await itemEvaluacionController.loadItemsEvaluacion(search)
-
-    if (!response || !response.ok) {
-      toast.error(response?.errorMessage ?? 'No fue posible cargar items de evaluacion')
-      return
-    }
-
-    const itemsEvaluacion = response.data?.map(mapItemEvaluacionToItemList)
-
-    setItemsByList((current) => ({
-      ...current,
-      'items-evaluacion': itemsEvaluacion,
-    }))
-  }
 
   async function prepareTiendaRelations() {
     const response = await tiendaRelationsController.loadRelationOptions()
@@ -1118,24 +182,274 @@ export function ListConfigPage() {
     return true
   }
 
-  async function loadTiposTienda() {
-    const response = await tipoTiendaController.loadTipoTiendas(search)
+  // Cada entidad se comporta igual (cargar, crear, editar, desactivar) pero
+  // sus hooks/controladores exponen nombres de metodo distintos (algunos con
+  // errores de copiar-pegar historicos, p.ej. zonaController.loadAuditor).
+  // Esta tabla mapea esas particularidades una sola vez; el resto de la
+  // pagina solo conoce la interfaz uniforme de EntityAdapter.
+  const entityAdapters: Record<EntityId, EntityAdapter> = {
+    auditores: {
+      mapper: mapAuditorToListItem,
+      Modal: AuditorModal,
+      getId: (raw: auditor) => String(raw.id_auditor ?? ''),
+      loadList: () => auditorController.loadAuditores(search),
+      loadSingle: (id) => auditorController.loadAuditor(id),
+      create: (payload: AuditorFormState) => auditorController.createAuditor(payload),
+      edit: (id, payload: AuditorFormState) => auditorController.editAuditor(id, payload),
+      deactivate: (id) => auditorController.desactivateAuditor(id),
+      activate: (id) => auditorController.activateAuditor(id),
+      isSaving: auditorController.loading,
+    },
+    zonas: {
+      mapper: mapZonaToListItem,
+      Modal: ZonaModal,
+      getId: (raw: zona) => String(raw.id_zona ?? ''),
+      loadList: () => zonaController.loadZonas(search),
+      loadSingle: (id) => zonaController.loadAuditor(id),
+      create: (payload: ZonaFormState) => zonaController.createZona(payload),
+      edit: (id, payload: ZonaFormState) => zonaController.editZona(id, payload),
+      deactivate: (id) => zonaController.desactivateZona(id),
+      activate: (id) => zonaController.activateZona(id),
+      isSaving: zonaController.loading,
+    },
+    causales: {
+      mapper: mapCausalToListItem,
+      Modal: CausalModal,
+      getId: (raw: causal) => String(raw.id_causal ?? ''),
+      loadList: () => causalController.loadCausales(search),
+      loadSingle: (id) => causalController.loadCausal(id),
+      create: (payload: CausalFormState) => causalController.createCausal(payload),
+      edit: (id, payload: CausalFormState) => causalController.editCausal(id, payload),
+      deactivate: (id) => causalController.desactivateCausal(id),
+      activate: (id) => causalController.activateCausal(id),
+      isSaving: causalController.loading,
+      isLoadingRelations: causalRelationsController.loading,
+      prepareRelations: prepareCausalRelations,
+      extraModalProps: { itemOptions: causalItemOptions },
+    },
+    'jefes-zona': {
+      mapper: mapJefeZonaToListItem,
+      Modal: JefeZonaModal,
+      getId: (raw: jefe_zona) => String(raw.id_jefe_zona ?? ''),
+      loadList: () => jefeZonaController.loadJefesZona(search),
+      loadSingle: (id) => jefeZonaController.loadJefeZona(id),
+      create: (payload: JefeZonaFormState) => jefeZonaController.createJefeZona(payload),
+      edit: (id, payload: JefeZonaFormState) => jefeZonaController.editJefeZona(id, payload),
+      deactivate: (id) => jefeZonaController.desactivateJefeZona(id),
+      activate: (id) => jefeZonaController.activateJefeZona(id),
+      isSaving: jefeZonaController.loading,
+    },
+    tiendas: {
+      mapper: mapTiendaToListItem,
+      Modal: TiendaModal,
+      getId: (raw: tienda) => String(raw.id_tienda ?? ''),
+      loadList: () => tiendaController.loadTiendas(search),
+      loadSingle: (id) => tiendaController.loadTienda(id),
+      create: (payload: TiendaFormState) => tiendaController.createTienda(payload),
+      edit: (id, payload: TiendaFormState) => tiendaController.editTienda(id, payload),
+      deactivate: (id) => tiendaController.desactivateTienda(id),
+      activate: (id) => tiendaController.activateTienda(id),
+      isSaving: tiendaController.loading,
+      isLoadingRelations: tiendaRelationsController.loading,
+      prepareRelations: prepareTiendaRelations,
+      extraModalProps: { relationOptions: tiendaRelationOptions },
+    },
+    'tipos-tienda': {
+      mapper: mapTipoTiendaToListItem,
+      Modal: TipoTiendaModal,
+      getId: (raw: tipo_tienda) => String(raw.id_tipo_tienda ?? ''),
+      loadList: () => tipoTiendaController.loadTipoTiendas(search),
+      loadSingle: (id) => tipoTiendaController.loadTipoTienda(id),
+      create: (payload: TipoTiendaFormState) => tipoTiendaController.createTipoTienda(payload),
+      edit: (id, payload: TipoTiendaFormState) => tipoTiendaController.editTipoTienda(id, payload),
+      deactivate: (id) => tipoTiendaController.desactivateTipoTienda(id),
+      activate: (id) => tipoTiendaController.activateTipoTienda(id),
+      isSaving: tipoTiendaController.loading,
+    },
+    marcas: {
+      mapper: mapMarcaToListItem,
+      Modal: MarcaModal,
+      getId: (raw: marca) => String(raw.id_marca ?? ''),
+      loadList: () => marcaController.loadMarcas(search),
+      loadSingle: (id) => marcaController.loadMarca(id),
+      create: (payload: MarcaFormState) => marcaController.createMarca(payload),
+      edit: (id, payload: MarcaFormState) => marcaController.editMarca(id, payload),
+      deactivate: (id) => marcaController.desactivateMarca(id),
+      activate: (id) => marcaController.activateMarca(id),
+      isSaving: marcaController.loading,
+    },
+    bodegas: {
+      mapper: mapBodegaToItemList,
+      Modal: BodegaModal,
+      getId: (raw: bodega) => String(raw.id_bodega ?? ''),
+      loadList: () => bodegaController.loadBodegas(search),
+      loadSingle: (id) => bodegaController.loadBodega(id),
+      create: (payload: BodegaFormState) => bodegaController.createBodega(payload),
+      edit: (id, payload: BodegaFormState) => bodegaController.editBodega(id, payload),
+      deactivate: (id) => bodegaController.desactivateBodega(id),
+      activate: (id) => bodegaController.activateBodega(id),
+      isSaving: bodegaController.loading,
+      canDeactivate: false,
+      cannotDeactivateReason: 'La bodega se desactiva automaticamente cuando se desactiva su tienda.',
+    },
+    'areas-responsables': {
+      mapper: mapAreaResponsableToListItem,
+      Modal: AreaResponsableModal,
+      getId: (raw: areas_responsables) => String(raw.id_area_responsable ?? ''),
+      loadList: () => areaResponsableController.loadAreasResponsable(search),
+      loadSingle: (id) => areaResponsableController.loadAreaResponsable(id),
+      create: (payload: AreaResponsableFormState) => areaResponsableController.createAreaResponsable(payload),
+      edit: (id, payload: AreaResponsableFormState) => areaResponsableController.editAreaResponsable(id, payload),
+      deactivate: (id) => areaResponsableController.desactivateAreaResponsable(id),
+      activate: (id) => areaResponsableController.activateAreaResponsable(id),
+      isSaving: areaResponsableController.loading,
+    },
+    'items-evaluacion': {
+      mapper: mapItemEvaluacionToItemList,
+      Modal: ItemEvaluacionModal,
+      getId: (raw: item_evaluacion) => String(raw.id_item_evaluacion ?? ''),
+      loadList: () => itemEvaluacionController.loadItemsEvaluacion(search),
+      loadSingle: (id) => itemEvaluacionController.loadItemEvaluacion(id),
+      create: (payload: ItemEvaluacionFormState) => itemEvaluacionController.createItemEvaluacion(payload),
+      edit: (id, payload: ItemEvaluacionFormState) => itemEvaluacionController.editItemEvaluacion(id, payload),
+      deactivate: (id) => itemEvaluacionController.desactivateItemValuacion(id),
+      activate: (id) => itemEvaluacionController.activateItemEvaluacion(id),
+      isSaving: itemEvaluacionController.loading,
+    },
+  }
+
+  async function loadEntityItems(entityId: EntityId) {
+    const adapter = entityAdapters[entityId]
+    const response = await adapter.loadList()
 
     if (!response || !response.ok) {
-      toast.error(response?.errorMessage ?? 'No fue posible cargar tipos de tienda')
+      const definitionName = listDefinitions.find((definition) => definition.id === entityId)?.name ?? entityId
+      toast.error(response?.errorMessage ?? `No fue posible cargar ${definitionName.toLowerCase()}`)
       return
     }
 
-    const tiposTienda = response.data?.map(mapTipoTiendaToListItem)
-
-    setItemsByList((current) => ({
-      ...current,
-      'tipos-tienda': tiposTienda,
-    }))
+    const items = (response.data ?? []).map(adapter.mapper)
+    setItemsByList((current) => ({ ...current, [entityId]: items }))
   }
 
+  async function openCreateForm() {
+    const entityId = selectedListId as EntityId
+    const adapter = entityAdapters[entityId]
 
-  React.useEffect(() => {
+    if (!adapter) {
+      return
+    }
+
+    setActiveItemId('')
+    setModalError(null)
+
+    if (adapter.prepareRelations && !(await adapter.prepareRelations())) {
+      return
+    }
+
+    setModal({ entityId, mode: 'create', data: null })
+  }
+
+  async function openEditForm(item: ListItem) {
+    const entityId = selectedListId as EntityId
+    const adapter = entityAdapters[entityId]
+
+    if (!adapter) {
+      return
+    }
+
+    setActiveItemId(item.id)
+    setModalError(null)
+
+    if (adapter.prepareRelations && !(await adapter.prepareRelations())) {
+      return
+    }
+
+    const response = await adapter.loadSingle(item.id)
+
+    if (!response.ok || !response.data) {
+      toast.error(response.errorMessage ?? `No fue posible cargar ${entityWithArticle(entityId)}.`)
+      setModal({ entityId, mode: 'edit', data: null })
+      return
+    }
+
+    setModal({ entityId, mode: 'edit', data: response.data })
+  }
+
+  function closeModal() {
+    if (modal && isEntityBusy(entityAdapters[modal.entityId])) {
+      return
+    }
+
+    setModal(null)
+    setModalError(null)
+  }
+
+  async function handleModalSubmit(payload: unknown) {
+    if (!modal) {
+      return
+    }
+
+    const adapter = entityAdapters[modal.entityId]
+    setModalError(null)
+
+    const ok =
+      modal.mode === 'create'
+        ? await adapter.create(payload)
+        : await adapter.edit(adapter.getId(modal.data), payload)
+
+    if (!ok) {
+      setModalError(`No fue posible guardar la informacion ${entityWithDePrefix(modal.entityId)}.`)
+      return
+    }
+
+    await loadEntityItems(modal.entityId)
+    closeModal()
+  }
+
+  function handleDelete(item: ListItem) {
+    const adapter = entityAdapters[selectedListId as EntityId]
+
+    if (adapter.canDeactivate === false) {
+      toast.error(adapter.cannotDeactivateReason ?? 'Esta accion no esta disponible para esta lista.')
+      return
+    }
+
+    setPendingDeleteItem(item)
+    setIsConfirmModalOpen(true)
+  }
+
+  function closeConfirmModal() {
+    if (Object.values(entityAdapters).some(isEntityBusy)) {
+      return
+    }
+
+    setIsConfirmModalOpen(false)
+    setPendingDeleteItem(null)
+  }
+
+  async function confirmDelete() {
+    if (!pendingDeleteItem) {
+      return
+    }
+
+    const entityId = selectedListId as EntityId
+    const adapter = entityAdapters[entityId]
+    const isActivating = !pendingDeleteItem.status
+    const ok = isActivating
+      ? await adapter.activate(pendingDeleteItem.id)
+      : await adapter.deactivate(pendingDeleteItem.id)
+
+    if (!ok) {
+      toast.error(`No fue posible ${isActivating ? 'activar' : 'desactivar'} ${entityWithArticle(entityId)}.`)
+      return
+    }
+
+    await loadEntityItems(entityId)
+    closeConfirmModal()
+  }
+
+  useEffect(() => {
     async function checkSession() {
       const valid = await validateSession()
 
@@ -1150,31 +464,21 @@ export function ListConfigPage() {
     checkSession()
   }, [navigate])
 
-  //Convertir auditores a listas
-  React.useEffect(() => {
-    async function getConfigs() {
-      await loadAuditores()
-      await loadCausales()
-      await loadZonas()
-      await loadJefesZona()
-      await loadTiendas()
-      await loadMarcas()
-      await loadBodegas()
-      await loadAreasResponsables()
-      await loadItemsEvaluacion()
-      await loadTiposTienda()
-    }
-
-    void getConfigs()
+  useEffect(() => {
+    void Promise.all(listDefinitions.map((definition) => loadEntityItems(definition.id as EntityId)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (isLogged === null) {
     return null
   }
 
+  const activeAdapter = modal ? entityAdapters[modal.entityId] : null
+  const ActiveModal = activeAdapter?.Modal
+
   return (
     <main className="list-config">
-      <ConfigSidebar setSelectedListId={setSelectedListId}  selectedDefinition={selectedDefinition}  itemsByList={itemsByList}/>
+      <ConfigSidebar setSelectedListId={setSelectedListId} selectedDefinition={selectedDefinition} itemsByList={itemsByList} />
 
       <section className="list-config__workspace">
         <header className="list-config__hero">
@@ -1188,17 +492,22 @@ export function ListConfigPage() {
         <div className="list-config__toolbar">
           <label className="list-config__search">
             <span>Buscar en la lista</span>
-            <input type="search" placeholder={`Buscar ${selectedDefinition.name.toLowerCase()}`} value={search} onChange={(event) => {
+            <input
+              type="search"
+              placeholder={`Buscar ${selectedDefinition.name.toLowerCase()}`}
+              value={search}
+              onChange={(event) => {
                 const nextValue = event.target.value
                 startTransition(() => setSearch(nextValue))
-              }}/>
+              }}
+            />
           </label>
 
           <button
             className="list-config__primary-button"
             type="button"
             onClick={() => void openCreateForm()}
-            disabled={!['auditores', 'causales', 'zonas', 'jefes-zona', 'tiendas', 'marcas', 'bodegas', 'areas-responsables', 'items-evaluacion', 'tipos-tienda'].includes(selectedListId)}
+            disabled={!entityAdapters[selectedListId as EntityId]}
           >
             Crear registro
           </button>
@@ -1206,16 +515,16 @@ export function ListConfigPage() {
 
         <div className="list-config__content">
           <section className="list-config__cards-panel">
-
             <div className="list-config__cards-grid">
               {filteredItems.map((item) => (
                 <ListItemCard
                   key={item.id}
                   item={item}
-                  isActive={item.id === activeItemId}
+                  isSelected={item.id === activeItemId}
                   onOpen={() => setActiveItemId(item.id)}
                   onEdit={() => void openEditForm(item)}
-                  onDelete={() => void handleDelete(item)}
+                  onDelete={() => handleDelete(item)}
+                  deactivateDisabled={entityAdapters[selectedListId as EntityId].canDeactivate === false}
                 />
               ))}
 
@@ -1230,151 +539,32 @@ export function ListConfigPage() {
         </div>
       </section>
 
-      <AuditorModal
-        isOpen={isAuditorModalOpen}
-        mode={auditorModalMode}
-        initialData={selectedAuditor}
-        isSaving={auditorController.loading}
-        errorMessage={auditorModalError}
-        onClose={closeAuditorModal}
-        onSubmit={handleAuditorSubmit}
-      />
-      <ZonaModal
-        isOpen={isZonaModalOpen}
-        mode={zonaModalMode}
-        initialData={selectedZona}
-        isSaving={zonaController.loading}
-        errorMessage={zonaModalError}
-        onClose={closeZonaModal}
-        onSubmit={handleZonaSubmit}
-      />
-      <CausalModal
-        isOpen={isCausalModalOpen}
-        mode={causalModalMode}
-        initialData={selectedCausal}
-        itemOptions={causalItemOptions}
-        isLoadingRelations={causalRelationsController.loading}
-        isSaving={causalController.loading}
-        errorMessage={causalModalError}
-        onClose={closeCausalModal}
-        onSubmit={handleCausalSubmit}
-      />
-      <JefeZonaModal
-        isOpen={isJefeZonaModalOpen}
-        mode={jefeZonaModalMode}
-        initialData={selectedJefeZona}
-        isSaving={jefeZonaController.loading}
-        errorMessage={jefeZonaModalError}
-        onClose={closeJefeZonaModal}
-        onSubmit={handleJefeZonaSubmit}
-      />
-      <BodegaModal
-        isOpen={isBodegaModalOpen}
-        mode={bodegaModalMode}
-        initialData={selectedBodega}
-        isSaving={bodegaController.loading}
-        errorMessage={bodegaModalError}
-        onClose={closeBodegaModal}
-        onSubmit={handleBodegaSubmit}
-      />
-      <AreaResponsableModal
-        isOpen={isAreaResponsableModalOpen}
-        mode={areaResponsableModalMode}
-        initialData={selectedAreaResponsable}
-        isSaving={areaResponsableController.loading}
-        errorMessage={areaResponsableModalError}
-        onClose={closeAreaResponsableModal}
-        onSubmit={handleAreaResponsableSubmit}
-      />
-      <MarcaModal
-        isOpen={isMarcaModalOpen}
-        mode={marcaModalMode}
-        initialData={selectedMarca}
-        isSaving={marcaController.loading}
-        errorMessage={marcaModalError}
-        onClose={closeMarcaModal}
-        onSubmit={handleMarcaSubmit}
-      />
-      <TiendaModal
-        isOpen={isTiendaModalOpen}
-        mode={tiendaModalMode}
-        initialData={selectedTienda}
-        relationOptions={tiendaRelationOptions}
-        isLoadingRelations={tiendaRelationsController.loading}
-        isSaving={tiendaController.loading}
-        errorMessage={tiendaModalError}
-        onClose={closeTiendaModal}
-        onSubmit={handleTiendaSubmit}
-      />
-      <ItemEvaluacionModal
-        isOpen={isItemEvaluacionModalOpen}
-        mode={itemEvaluacionModalMode}
-        initialData={selectedItemEvaluacion}
-        isSaving={itemEvaluacionController.loading}
-        errorMessage={itemEvaluacionModalError}
-        onClose={closeItemEvaluacionModal}
-        onSubmit={handleItemEvaluacionSubmit}
-      />
-      <TipoTiendaModal
-        isOpen={isTipoTiendaModalOpen}
-        mode={tipoTiendaModalMode}
-        initialData={selectedTipoTienda}
-        isSaving={tipoTiendaController.loading}
-        errorMessage={tipoTiendaModalError}
-        onClose={closeTipoTiendaModal}
-        onSubmit={handleTipoTiendaSubmit}
-      />
+      {modal && ActiveModal ? (
+        <ActiveModal
+          isOpen
+          mode={modal.mode}
+          initialData={modal.data}
+          isSaving={activeAdapter!.isSaving}
+          isLoadingRelations={activeAdapter!.isLoadingRelations}
+          errorMessage={modalError}
+          onClose={closeModal}
+          onSubmit={handleModalSubmit}
+          {...activeAdapter!.extraModalProps}
+        />
+      ) : null}
+
       <ConfirmModal
         isOpen={isConfirmModalOpen}
         mode="warning"
-        title={
-          selectedListId === 'zonas'
-            ? 'Desactivar zona'
-            : selectedListId === 'causales'
-              ? 'Desactivar causal'
-            : selectedListId === 'jefes-zona'
-              ? 'Desactivar jefe de zona'
-              : selectedListId === 'tiendas'
-                ? 'Desactivar tienda'
-              : selectedListId === 'marcas'
-                ? 'Desactivar marca'
-              : selectedListId === 'bodegas'
-                ? 'Desactivar bodega'
-                : selectedListId === 'areas-responsables'
-                  ? 'Desactivar area responsable'
-                : selectedListId === 'items-evaluacion'
-                  ? 'Desactivar item de evaluacion'
-                  : selectedListId === 'tipos-tienda'
-                    ? 'Desactivar tipo de tienda'
-              : 'Desactivar auditor'
-        }
+        title={`${pendingDeleteItem?.status ? 'Desactivar' : 'Activar'} ${entityNoun(selectedListId as EntityId)}`}
         description={
           pendingDeleteItem
-            ? `Se desactivara ${
-                selectedListId === 'zonas'
-                  ? 'la zona'
-                  : selectedListId === 'causales'
-                    ? 'la causal'
-                  : selectedListId === 'jefes-zona'
-                    ? 'el jefe de zona'
-                    : selectedListId === 'tiendas'
-                      ? 'la tienda'
-                    : selectedListId === 'marcas'
-                      ? 'la marca'
-                    : selectedListId === 'bodegas'
-                      ? 'la bodega'
-                      : selectedListId === 'areas-responsables'
-                        ? 'el area responsable'
-                      : selectedListId === 'items-evaluacion'
-                        ? 'el item de evaluacion'
-                        : selectedListId === 'tipos-tienda'
-                          ? 'el tipo de tienda'
-                    : 'el auditor'
-              } "${pendingDeleteItem.title}".`
+            ? `Se ${pendingDeleteItem.status ? 'desactivara' : 'activara'} ${entityWithArticle(selectedListId as EntityId)} "${pendingDeleteItem.title}".`
             : ''
         }
-        confirmText="Desactivar"
+        confirmText={pendingDeleteItem?.status ? 'Desactivar' : 'Activar'}
         cancelText="Cancelar"
+        isLoading={Object.values(entityAdapters).some(isEntityBusy)}
         onClose={closeConfirmModal}
         onSubmit={() => void confirmDelete()}
       />

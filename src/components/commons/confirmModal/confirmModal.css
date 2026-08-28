@@ -84,8 +84,13 @@
     border-color var(--motion-base);
 }
 
-.confirm-modal__button:hover {
+.confirm-modal__button:hover:not(:disabled) {
   transform: translateY(-1px);
+}
+
+.confirm-modal__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .confirm-modal__button--secondary {

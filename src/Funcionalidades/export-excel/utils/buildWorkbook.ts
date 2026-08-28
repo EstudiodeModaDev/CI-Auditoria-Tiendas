@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs'
+import type { areas_responsables } from '../../../models/database/areas_responsables'
 import type { auditor } from '../../../models/database/auditor'
 import type { auditoria, auditoriaDetalle } from '../../../models/database/auditoria'
 import type { bodega } from '../../../models/database/bodega'
@@ -8,8 +9,10 @@ import type { jefe_zona } from '../../../models/database/jefe_zona'
 import type { tienda } from '../../../models/database/tienda'
 import type { tipo_tienda } from '../../../models/database/tipo_tienda'
 import type { zona } from '../../../models/database/zona'
+import type { PlanAccionExportRow } from '../hooks/useExportPlanAccionData'
 import {
   buildMonthlyAuditoriaRows,
+  buildPlanesAccionRows,
   buildTiendaCatalogRows,
   computeVerticalMerges,
 } from './exportRowBuilders'
@@ -46,6 +49,8 @@ export type BuildWorkbookInput = {
   itemsEvaluacion: item_evaluacion[]
   auditorias: auditoria[]
   detalleByAuditoria: Map<number, auditoriaDetalle[]>
+  areasResponsables: areas_responsables[]
+  planesAccion: PlanAccionExportRow[]
   months: MonthKey[]
 }
 
@@ -66,6 +71,37 @@ function addTiendasSheet(workbook: ExcelJS.Workbook, input: BuildWorkbookInput) 
   autoSizeColumns(worksheet, headers)
 }
 
+
+function addPlanesAccionSheet(workbook: ExcelJS.Workbook, input: BuildWorkbookInput) {
+  const { headers, rows } = buildPlanesAccionRows({
+    planes: input.planesAccion,
+    zonas: input.zonas,
+    tiendas: input.tiendas,
+    areasResponsables: input.areasResponsables,
+  })
+
+  const worksheet = workbook.addWorksheet('Planes de accion', { views: [{ state: 'frozen', ySplit: 1 }] })
+  worksheet.addRow(headers)
+  styleHeaderRow(worksheet.getRow(1))
+  rows.forEach((row) => worksheet.addRow(row))
+  autoSizeColumns(worksheet, headers)
+
+  const fechaColumnIndexes = headers.reduce<number[]>((indexes, header, index) => {
+    if (header === 'Fecha creacion' || header === 'Fecha compromiso' || header === 'Fecha ultima respuesta') {
+      indexes.push(index + 1)
+    }
+
+    return indexes
+  }, [])
+
+  fechaColumnIndexes.forEach((columnIndex) => {
+    worksheet.getColumn(columnIndex).eachCell({ includeEmpty: false }, (cell, rowNumber) => {
+      if (rowNumber > 1 && cell.value instanceof Date) {
+        cell.numFmt = 'dd/mm/yyyy'
+      }
+    })
+  })
+}
 
 function addMonthlySheet(workbook: ExcelJS.Workbook, input: BuildWorkbookInput, monthKey: MonthKey) {
   const built = buildMonthlyAuditoriaRows({
@@ -141,6 +177,7 @@ export function buildExportWorkbook(input: BuildWorkbookInput): ExcelJS.Workbook
 
   addTiendasSheet(workbook, input)
   input.months.forEach((monthKey) => addMonthlySheet(workbook, input, monthKey))
+  addPlanesAccionSheet(workbook, input)
 
   return workbook
 }

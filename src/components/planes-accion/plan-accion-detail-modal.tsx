@@ -30,9 +30,13 @@ type PlanAttachmentView = {
 type SeguimientoAttachmentsMap = Record<number, PlanAttachmentView[]>
 type SeguimientoAttachmentsErrorsMap = Record<number, string | null>
 
-function formatFieldValue(value: number | string | null | undefined) {
+function formatFieldValue(value: number | string | string[] | null | undefined) {
   if (value === null || value === undefined || value === '') {
     return 'Sin informacion'
+  }
+
+  if (Array.isArray(value)) {
+    return value.length ? value.join(', ') : 'Sin informacion'
   }
 
   return String(value)

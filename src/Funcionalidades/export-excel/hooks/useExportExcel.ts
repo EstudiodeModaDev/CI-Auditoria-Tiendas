@@ -1,5 +1,6 @@
 import * as React from 'react'
 import toast from 'react-hot-toast'
+import type { areas_responsables } from '../../../models/database/areas_responsables'
 import type { auditor } from '../../../models/database/auditor'
 import type { bodega } from '../../../models/database/bodega'
 import type { causal } from '../../../models/database/causal'
@@ -13,6 +14,7 @@ import { enumerateMonthsInRange } from '../utils/monthNames'
 import { useExportAuditoriaData } from './useExportAuditoriaData'
 import { useExportCatalog } from './useExportCatalog'
 import { useExportFilters } from './useExportFilters'
+import { useExportPlanAccionData } from './useExportPlanAccionData'
 
 export type UseExportExcelDeps = {
   zonas: zona[]
@@ -22,12 +24,14 @@ export type UseExportExcelDeps = {
   tiposTienda: tipo_tienda[]
   auditores: auditor[]
   causales: causal[]
+  areasResponsables: areas_responsables[]
 }
 
 export function useExportExcel(deps: UseExportExcelDeps) {
   const filterController = useExportFilters()
   const catalogController = useExportCatalog()
   const dataController = useExportAuditoriaData(filterController.filters)
+  const planAccionDataController = useExportPlanAccionData(dataController.auditorias)
   const [exporting, setExporting] = React.useState(false)
 
   const months = React.useMemo(
@@ -69,6 +73,8 @@ export function useExportExcel(deps: UseExportExcelDeps) {
         itemsEvaluacion: catalogController.itemsEvaluacion,
         auditorias: dataController.auditorias,
         detalleByAuditoria: dataController.detalleByAuditoria,
+        areasResponsables: deps.areasResponsables,
+        planesAccion: planAccionDataController.planes,
         months,
       })
 
@@ -83,7 +89,15 @@ export function useExportExcel(deps: UseExportExcelDeps) {
     } finally {
       setExporting(false)
     }
-  }, [months, tiendasFiltradas, deps, catalogController.itemsEvaluacion, dataController.auditorias, dataController.detalleByAuditoria])
+  }, [
+    months,
+    tiendasFiltradas,
+    deps,
+    catalogController.itemsEvaluacion,
+    dataController.auditorias,
+    dataController.detalleByAuditoria,
+    planAccionDataController.planes,
+  ])
 
   return {
     filters: filterController.filters,
@@ -92,11 +106,12 @@ export function useExportExcel(deps: UseExportExcelDeps) {
     resetFilters: filterController.resetFilters,
     itemsEvaluacion: catalogController.itemsEvaluacion,
     auditorias: dataController.auditorias,
+    planesAccion: planAccionDataController.planes,
     tiendasFiltradas,
     months,
-    loading: catalogController.loading || dataController.loading,
+    loading: catalogController.loading || dataController.loading || planAccionDataController.loading,
     exporting,
-    error: dataController.error ?? catalogController.error,
+    error: dataController.error ?? catalogController.error ?? planAccionDataController.error,
     handleExport,
   }
 }

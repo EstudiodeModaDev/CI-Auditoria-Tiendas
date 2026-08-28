@@ -1,3 +1,4 @@
+import { useEffect, type ReactNode } from 'react'
 import './confirmModal.css'
 
 type ConfirmModalMode = 'normal' | 'warning'
@@ -11,6 +12,11 @@ type ConfirmModalProps = {
   mode?: ConfirmModalMode
   confirmText?: string
   cancelText?: string
+  isLoading?: boolean
+  loadingText?: string
+  closeOnOverlayClick?: boolean
+  closeOnEscape?: boolean
+  children?: ReactNode
 }
 
 export function ConfirmModal({
@@ -22,13 +28,39 @@ export function ConfirmModal({
   mode = 'normal',
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
+  isLoading = false,
+  loadingText = 'Procesando...',
+  closeOnOverlayClick = true,
+  closeOnEscape = true,
+  children,
 }: ConfirmModalProps) {
+  useEffect(() => {
+    if (!isOpen || !closeOnEscape) {
+      return
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !isLoading) {
+        onClose()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, closeOnEscape, isLoading, onClose])
+
   if (!isOpen) {
     return null
   }
 
+  function handleOverlayClick() {
+    if (closeOnOverlayClick && !isLoading) {
+      onClose()
+    }
+  }
+
   return (
-    <div className="confirm-modal__overlay" role="presentation" onClick={onClose}>
+    <div className="confirm-modal__overlay" role="presentation" onClick={handleOverlayClick}>
       <section
         aria-describedby="confirm-modal-description"
         aria-labelledby="confirm-modal-title"
@@ -48,14 +80,25 @@ export function ConfirmModal({
           <p className="confirm-modal__description" id="confirm-modal-description">
             {description}
           </p>
+          {children}
         </div>
 
         <div className="confirm-modal__actions">
-          <button className="confirm-modal__button confirm-modal__button--secondary" type="button" onClick={onClose}>
+          <button
+            className="confirm-modal__button confirm-modal__button--secondary"
+            type="button"
+            onClick={onClose}
+            disabled={isLoading}
+          >
             {cancelText}
           </button>
-          <button className="confirm-modal__button confirm-modal__button--primary" type="button" onClick={onSubmit}>
-            {confirmText}
+          <button
+            className="confirm-modal__button confirm-modal__button--primary"
+            type="button"
+            onClick={onSubmit}
+            disabled={isLoading}
+          >
+            {isLoading ? loadingText : confirmText}
           </button>
         </div>
       </section>

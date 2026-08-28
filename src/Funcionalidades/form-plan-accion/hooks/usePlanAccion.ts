@@ -56,7 +56,7 @@ export function usePlanAccion() {
       return { ok: false }
     }
 
-    actionsController.addNewPlanToCreate(formController.state, attachments)
+    actionsController.addNewPlanToCreate(formController.state, attachments, formController.notificarJefeZona)
     formController.resetState()
     formController.setPlanErrors({})
     toast.success("Plan de accion listo para crear")

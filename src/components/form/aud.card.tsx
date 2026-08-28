@@ -12,7 +12,6 @@ type AuditItemCardProps = {
   causales: SelectOption[]
   loading: boolean
   onChange: (patch: Partial<AuditoriaDetalleDTO>) => void
-  onOpenActionPlanModal: () => void
 }
 
 function formatOptionLabel(option: SelectOption) {
@@ -28,10 +27,12 @@ function getNumericOptionValue(option: SelectOption | null) {
   return typeof option?.value === 'number' ? option.value : null
 }
 
-export function AuditItemCard({ item, itemResult, causales, loading, onChange, onOpenActionPlanModal }: AuditItemCardProps) {
+export function AuditItemCard({ item, itemResult, causales, loading, onChange }: AuditItemCardProps) {
   const itemStatus = itemResult?.cumple === true ? 'cumple' : itemResult?.cumple === false ? 'no-cumple' : null
+  const isNumericItem = item.requiere_cantidad
   const shouldShowCausal = item.requiere_causal && itemStatus === 'no-cumple'
-  const shouldShowQuantity = item.requiere_cantidad && itemStatus === 'no-cumple'
+  const shouldShowQuantity = item.requiere_cantidad && itemStatus !== null
+  const shouldShowObservation = isNumericItem ? itemStatus !== null : itemStatus === 'no-cumple'
   const selectLayerProps = buildSelectLayerProps()
 
   return (
@@ -51,7 +52,7 @@ export function AuditItemCard({ item, itemResult, causales, loading, onChange, o
               : 'audit-form__item-action audit-form__item-action--pass'
           }
           type="button"
-          onClick={() => onChange({ cumple: true, observacion: '' })}
+          onClick={() => onChange(isNumericItem ? { cumple: true } : { cumple: true, observacion: '' })}
           disabled={loading}
         >
           Cumple
@@ -98,7 +99,7 @@ export function AuditItemCard({ item, itemResult, causales, loading, onChange, o
             value={itemResult?.cantidad_afectada ?? ""}
             onChange={(event) => {
               const value = event.target.value;
-
+              
               onChange({
                 cantidad_afectada: value === "" ? undefined : Number(value),
               });
@@ -118,7 +119,7 @@ export function AuditItemCard({ item, itemResult, causales, loading, onChange, o
         </label>
       ) : null}
 
-      { itemStatus === 'no-cumple' &&
+      { shouldShowObservation &&
         <label className="audit-form__item-observation">
           <span>Observacion</span>
           <textarea
@@ -128,25 +129,11 @@ export function AuditItemCard({ item, itemResult, causales, loading, onChange, o
             placeholder={
               itemStatus === 'no-cumple'
                 ? 'Describe la novedad encontrada'
-                : 'La observacion se habilita cuando el item no cumple'
+                : 'Ingresa una observacion para este item'
             }
-            disabled={itemStatus !== 'no-cumple'}
+            disabled={!shouldShowObservation}
             required={itemStatus === 'no-cumple'}
           />
-          <div className="audit-form__item-plan-action">
-            <div className="audit-form__item-plan-copy">
-              <strong>Plan de accion</strong>
-              <p>Registra un seguimiento correctivo para este hallazgo.</p>
-            </div>
-            <button
-              className="audit-form__item-plan-button"
-              onClick={onOpenActionPlanModal}
-              type="button"
-              disabled={loading}
-            >
-              Crear plan de accion
-            </button>
-          </div>
         </label>
       }
     </article>

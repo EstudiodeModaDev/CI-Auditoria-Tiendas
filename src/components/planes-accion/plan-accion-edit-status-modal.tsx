@@ -18,7 +18,7 @@ type PlanAccionDetailModalProps = {
   auditor?: auditor
 }
 
-type PlanStatusOption = 'Abierto' | 'Cerrado'
+type PlanStatusOption = 'En curso' | 'Finalizado' 
 
 export function ChangeActionPlanStatus({
   plan,
@@ -29,13 +29,14 @@ export function ChangeActionPlanStatus({
   tiendas,
   auditor,
 }: PlanAccionDetailModalProps) {
-  const { planAccion, planesSeguimientos } = useRepositories()
+  const { planAccion, planesSeguimientos, jefeZona } = useRepositories()
   const [currentPlan, setCurrentPlan] = React.useState<planAccion | null>(plan)
   const [isReasonModalOpen, setIsReasonModalOpen] = React.useState(false)
-  const [selectedStatus, setSelectedStatus] = React.useState<PlanStatusOption>('Abierto')
+  const [selectedStatus, setSelectedStatus] = React.useState<PlanStatusOption>('En curso')
   const [reason, setReason] = React.useState('')
   const [reasonError, setReasonError] = React.useState<string | null>(null)
   const [statusLoading, setStatusLoading] = React.useState(false)
+  const [notificarJefeZona, setNotificarJefeZona] = React.useState(false)
   const { loadPlanAccionResponses } = usePlanAccionRespuestasList(String(plan?.id_plan_accion ?? ''))
   const visiblePlan = currentPlan ?? plan
   const selectedTienda = React.useMemo(() => {
@@ -44,10 +45,11 @@ export function ChangeActionPlanStatus({
 
   React.useEffect(() => {
     setCurrentPlan(plan)
-    setSelectedStatus(plan?.estado?.toLowerCase() === 'cerrado' ? 'Cerrado' : 'Abierto')
+    setSelectedStatus(plan?.estado?.toLowerCase() === 'cerrado' ? 'Finalizado' : 'En curso')
     setIsReasonModalOpen(false)
     setReason('')
     setReasonError(null)
+    setNotificarJefeZona(true)
   }, [plan, isOpen])
 
   async function applyStatusUpdate(nextStatus: PlanStatusOption, nextReason: string) {
@@ -60,7 +62,7 @@ export function ChangeActionPlanStatus({
 
     if (!trimmedReason) {
       setReasonError(
-        nextStatus === 'Cerrado'
+        nextStatus === 'Finalizado'
           ? 'Debes escribir el motivo del cierre'
           : 'Debes escribir el motivo de la devolucion'
       )
@@ -73,7 +75,7 @@ export function ChangeActionPlanStatus({
       const seguimientoResponse = await planesSeguimientos.create({
         fecha_seguimiento: new Date(),
         id_plan_accion: visiblePlan.id_plan_accion,
-        comentario: nextStatus === 'Cerrado'
+        comentario: nextStatus === 'Finalizado'
           ? `Cierre del plan: ${trimmedReason}`
           : `Devolucion del plan: ${trimmedReason}`,
         usuario: currentName,
@@ -82,7 +84,7 @@ export function ChangeActionPlanStatus({
       if (!seguimientoResponse.status) {
         toast.error(
           seguimientoResponse.message ??
-          (nextStatus === 'Cerrado'
+          (nextStatus === 'Finalizado'
             ? 'No fue posible registrar el motivo del cierre'
             : 'No fue posible registrar el motivo de la devolucion')
         )
@@ -108,20 +110,19 @@ export function ChangeActionPlanStatus({
       toast.success('Estado del plan actualizado con exito')
 
       await loadPlanAccionResponses()
-
-      console.log(nextStatus)
-      console.log(plan)
-      console.log(selectedTienda)
-      console.log(auditor)
-    
     } finally {
       setStatusLoading(false)
-      if (nextStatus === 'Abierto' && plan && selectedTienda && auditor) {
-        await actionPlanReturnedNotification(plan, trimmedReason, selectedTienda, auditor)
+
+      const jefeZonaFounded = notificarJefeZona && selectedTienda?.id_jefe_zona
+        ? await jefeZona?.getById(String(selectedTienda.id_jefe_zona))
+        : null
+
+      if (nextStatus === 'En curso' && plan && selectedTienda && auditor) {
+        await actionPlanReturnedNotification(plan, trimmedReason, selectedTienda, auditor, jefeZonaFounded?.data)
       }
 
-      if (nextStatus === 'Cerrado' && plan && selectedTienda && auditor) {
-        await actionPlanApprovedNotification(plan, selectedTienda, auditor)
+      if (nextStatus === 'Finalizado' && plan && selectedTienda && auditor) {
+        await actionPlanApprovedNotification(plan, selectedTienda, auditor, jefeZonaFounded?.data)
       }
     }
   }
@@ -160,8 +161,8 @@ export function ChangeActionPlanStatus({
               onChange={(event) => setSelectedStatus(event.target.value as PlanStatusOption)}
               disabled={statusLoading}
             >
-              <option value="Abierto">Abierto</option>
-              <option value="Cerrado">Cerrado</option>
+              <option value="En curso">En curso</option>
+              <option value="Finalizado">Finalizado</option>
             </select>
           </label>
 
@@ -199,10 +200,10 @@ export function ChangeActionPlanStatus({
               <div>
                 <span className="plan-accion-detail-modal__eyebrow">Confirmacion</span>
                 <h3 id="plan-accion-close-modal-title">
-                  {selectedStatus === 'Cerrado' ? 'Motivo del cierre' : 'Motivo de la devolucion'}
+                  {selectedStatus === 'Finalizado' ? 'Motivo del cierre' : 'Motivo de la devolucion'}
                 </h3>
                 <p>
-                  {selectedStatus === 'Cerrado'
+                  {selectedStatus === 'Finalizado'
                     ? 'Antes de cerrar el plan, registra por que se debe marcar como cerrado.'
                     : 'Antes de reabrir el plan, registra el motivo de la devolucion.'}
                 </p>
@@ -210,7 +211,7 @@ export function ChangeActionPlanStatus({
             </header>
 
             <label className="plan-accion-detail-modal__field">
-              <span>{selectedStatus === 'Cerrado' ? 'Motivo del cierre' : 'Motivo de la devolucion'}</span>
+              <span>{selectedStatus === 'Finalizado' ? 'Motivo del cierre' : 'Motivo de la devolucion'}</span>
               <textarea
                 value={reason}
                 onChange={(event) => {
@@ -221,13 +222,27 @@ export function ChangeActionPlanStatus({
                 }}
                 disabled={statusLoading}
                 placeholder={
-                  selectedStatus === 'Cerrado'
+                  selectedStatus === 'Finalizado'
                     ? 'Describe el motivo del cierre'
                     : 'Describe el motivo de la devolucion'
                 }
                 rows={4}
               />
               {reasonError ? <small className="plan-accion-detail-modal__error">{reasonError}</small> : null}
+            </label>
+
+            <label className="plan-accion-detail-modal__notify">
+              <input
+                type="checkbox"
+                checked={notificarJefeZona}
+                onChange={(event) => setNotificarJefeZona(event.target.checked)}
+                disabled={statusLoading}
+              />
+              <span>
+                {selectedStatus === 'Finalizado'
+                  ? 'Notificar al jefe de zona al cerrar el plan'
+                  : 'Notificar al jefe de zona al devolver el plan'}
+              </span>
             </label>
 
             <footer className="plan-accion-detail-modal__nested-footer">
@@ -245,7 +260,11 @@ export function ChangeActionPlanStatus({
                 onClick={() => void applyStatusUpdate(selectedStatus, reason)}
                 disabled={statusLoading}
               >
-                {statusLoading ? 'Guardando...' : selectedStatus === 'Cerrado' ? 'Confirmar cierre' : 'Confirmar devolucion'}
+                {
+                  statusLoading ? 'Guardando...' : 
+                  selectedStatus === 'Finalizado' ? 'Confirmar cierre' : 
+                  'Confirmar devolucion'
+                }
               </button>
             </footer>
           </section>
