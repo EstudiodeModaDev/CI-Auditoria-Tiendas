@@ -139,9 +139,7 @@ export function ExportExcelPage(props: ExportExcelPageProps) {
       <section className="export-excel-page__kpis" aria-label="Resumen de la exportacion">
         <KpiCard titulo="Tiendas incluidas" subtitulo="Segun filtros aplicados" valor={controller.tiendasFiltradas.length} />
         <KpiCard titulo="Auditorias encontradas" subtitulo="En el rango seleccionado" valor={controller.auditorias.length} />
-        <KpiCard titulo="Hojas por mes" subtitulo="Una hoja por mes en el rango" valor={controller.months.length} />
-        <KpiCard titulo="Items de evaluacion" subtitulo="Catalogo activo" valor={controller.itemsEvaluacion.length} />
-        <KpiCard titulo="Planes de accion" subtitulo="Con su ultima respuesta" valor={controller.planesAccion.length} />
+        <KpiCard titulo="Planes de accion encontrados" subtitulo="En el rango seleccionado" valor={controller.planesAccion.length} />
       </section>
 
       {controller.error ? <p className="export-excel-page__message">{controller.error}</p> : null}
@@ -154,7 +152,6 @@ export function ExportExcelPage(props: ExportExcelPageProps) {
           <h2>Contenido del archivo</h2>
           <ul>
             <li><strong>Tiendas</strong>: catalogo de tiendas activas con su zona, jefe de zona y ultimo auditor.</li>
-            <li><strong>PARAMETROS</strong>: catalogo de items de evaluacion y sus motivos.</li>
             {controller.months.map((month) => (
               <li key={month.sheetName}>
                 <strong>{month.sheetName}</strong>: resultados de auditoria de {month.label} {month.year}.

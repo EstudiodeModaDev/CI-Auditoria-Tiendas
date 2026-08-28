@@ -95,15 +95,12 @@ export function Form(props: FormProps) {
     <main className="audit-form-page">
       <section className="audit-form-page__hero">
         <div className="audit-form-page__hero-copy">
-          <span className="audit-form-page__eyebrow">Formulario segmentado</span>
-          <h1>Auditoria integral de inventario y control operativo</h1>
-          <p>
-            Una sola vista para documentar la visita, validar controles, registrar hallazgos
-            y dejar el plan de accion listo para seguimiento.
-          </p>
+          <h1>Auditoria de inventario</h1>
+          { auditoria.id_auditoria &&
           <div className="audit-form-page__hero-tags" aria-label="Resumen rapido">
-            <span>Codigo {auditoria.id_auditoria}</span>
+            <span>{"ID:" + "PA - " + auditoria.id_auditoria}</span>
           </div>
+          }
         </div>
 
         <aside className="audit-form-page__hero-panel" aria-label="Estado de avance">
@@ -112,11 +109,6 @@ export function Form(props: FormProps) {
           <div className="audit-form-page__progress" aria-hidden="true">
             <span style={{ width: `${completion}%` }} />
           </div>
-          <p className="audit-form-page__hero-note">
-            {completion >= 85
-              ? 'El formulario ya tiene un nivel alto de completitud.'
-              : 'Aun faltan datos clave y respuestas por registrar.'}
-          </p>
         </aside>
       </section>
 

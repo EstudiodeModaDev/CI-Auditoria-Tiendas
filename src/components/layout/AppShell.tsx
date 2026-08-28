@@ -71,7 +71,7 @@ export function AppShell({ children }: AppShellProps) {
           <p className="app-shell__user">{getUserLabel(session?.user.email)}</p>
           <span className="app-shell__role">{getRoleLabel(role)}</span>
           <button className="app-shell__signout" type="button" onClick={handleSignOut}>
-            <span className="app-shell__signout-short" aria-hidden="true">X</span>
+            <span className="app-shell__signout-short" aria-hidden="true">{session?.user.email ? session?.user.email[0].toLocaleUpperCase() : ""}</span>
             <span className="app-shell__signout-label">Cerrar sesion</span>
           </button>
         </div>

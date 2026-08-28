@@ -106,7 +106,6 @@ export function PlanAccionHome(props: PlanAccionHomeProps) {
 
   const kpis = React.useMemo(() => [
     { titulo: 'Pendientes', subtitulo: 'Planes por iniciar', valor: planAccionController.viewWaiting },
-    { titulo: 'En proceso', subtitulo: 'Seguimiento activo', valor: planAccionController.viewOnGoing },
     { titulo: 'Vencidos', subtitulo: 'Compromisos atrasados', valor: planAccionController.viewAfterDate },
     { titulo: 'Cerrados', subtitulo: 'Gestion completada', valor: planAccionController.viewFinished },
     { titulo: 'Cumplimiento', subtitulo: 'Cierre del periodo', valor: formatPercentage(completionRate) },
@@ -127,8 +126,7 @@ export function PlanAccionHome(props: PlanAccionHomeProps) {
     <main className="plan-accion-page">
       <section className="plan-accion-page__hero">
         <div>
-          <span className="plan-accion-page__eyebrow">Seguimiento operativo</span>
-          <h1>Gestion de planes de accion</h1>
+          <h1>Gestión de planes de accion</h1>
           <p>Monitorea avances, detecta compromisos vencidos y revisa el estado de cada plan desde un solo tablero.</p>
         </div>
       </section>
