@@ -37,7 +37,7 @@ export function usePlanAccionActions() {
         const response = await planAccion?.create({
           ...currentPlan.plan,
           id_auditoria: auditoria.id_auditoria,
-          responsable: tiendaFounded?.data?.nombre,
+          responsable: auditoria.id_auditor,
           correo_responsable: tiendaFounded?.data?.correo_tienda
         })
 

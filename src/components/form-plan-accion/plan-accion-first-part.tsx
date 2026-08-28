@@ -56,6 +56,7 @@ export function PlanAccionFirstPartForm({
     updateField("fecha_creacion", formatDateInputValue(auditoria.fecha_auditoria))
     updateField("id_zona", auditoria.id_zona)
     updateField("id_tienda", auditoria.id_tienda)
+    updateField("responsable", auditoria.id_auditor)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auditoria])
 

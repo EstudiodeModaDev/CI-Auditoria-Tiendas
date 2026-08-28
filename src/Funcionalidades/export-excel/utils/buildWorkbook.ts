@@ -78,6 +78,7 @@ function addPlanesAccionSheet(workbook: ExcelJS.Workbook, input: BuildWorkbookIn
     zonas: input.zonas,
     tiendas: input.tiendas,
     areasResponsables: input.areasResponsables,
+    auditores: input.auditores,
   })
 
   const worksheet = workbook.addWorksheet('Planes de accion', { views: [{ state: 'frozen', ySplit: 1 }] })

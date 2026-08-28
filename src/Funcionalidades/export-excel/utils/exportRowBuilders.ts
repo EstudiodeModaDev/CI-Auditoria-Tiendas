@@ -228,6 +228,7 @@ export type PlanesAccionDeps = {
   zonas: zona[]
   tiendas: tienda[]
   areasResponsables: areas_responsables[]
+  auditores: auditor[]
 }
 
 function formatUltimaRespuesta(respuesta: planAccionSeguimiento | null): SheetRow {
@@ -248,6 +249,7 @@ export function buildPlanesAccionRows(deps: PlanesAccionDeps) {
   const zonaById = new Map(deps.zonas.map((item) => [item.id_zona, item.nombre]))
   const tiendaById = new Map(deps.tiendas.map((item) => [item.id_tienda, item.nombre]))
   const areaResponsableById = new Map(deps.areasResponsables.map((item) => [item.id_area_responsable, item.nombre]))
+  const auditorById = new Map(deps.auditores.map((item) => [item.id_auditor, item.nombre]))
 
   const rows: SheetRow[] = deps.planes.map(({ plan, ultimaRespuesta }: PlanAccionExportRow) => {
     const generalColumns: SheetRow = [
@@ -256,7 +258,7 @@ export function buildPlanesAccionRows(deps: PlanesAccionDeps) {
       plan.id_zona != null ? zonaById.get(plan.id_zona) ?? '' : '',
       plan.id_tienda != null ? tiendaById.get(plan.id_tienda) ?? '' : '',
       plan.id_area_responsable != null ? areaResponsableById.get(plan.id_area_responsable) ?? '' : '',
-      plan.responsable || '',
+      plan.responsable != null ? auditorById.get(plan.responsable) ?? '' : '',
       Array.isArray(plan.tipo_hallazgo) ? plan.tipo_hallazgo.join(', ') : '',
       plan.descripcion_hallazgo || '',
       plan.impacto || '',

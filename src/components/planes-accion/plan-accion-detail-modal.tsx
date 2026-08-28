@@ -283,6 +283,10 @@ export function PlanAccionDetailModal({ plan, isOpen, onClose, onPlanUpdated, ti
   }, [SeguimientosAttachments, attachments, isOpen, orderedResponses])
 
   const visiblePlan = currentPlan ?? plan
+  const auditorById = React.useMemo(
+    () => new Map(auditores.map((item) => [item.id_auditor, item.nombre])),
+    [auditores]
+  )
 
   function handleOpenStatusModal() {
     setIsStatusModalOpen(true)
@@ -330,7 +334,7 @@ export function PlanAccionDetailModal({ plan, isOpen, onClose, onPlanUpdated, ti
               </div>
               <div>
                 <dt>Responsable</dt>
-                <dd>{formatFieldValue(visiblePlan.responsable)}</dd>
+                <dd>{formatFieldValue(visiblePlan.responsable != null ? auditorById.get(visiblePlan.responsable) : null)}</dd>
               </div>
             </dl>
           </article>

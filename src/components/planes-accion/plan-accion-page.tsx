@@ -68,6 +68,10 @@ export function PlanAccionHome(props: PlanAccionHomeProps) {
   const [selectedPlan, setSelectedPlan] = React.useState<planAccion | null>(null)
   const [isDetailedTableOpen, setIsDetailedTableOpen] = React.useState(false)
   const auditoresOption = React.useMemo(() => props.auditores.map((a) => {return mapAuditorOption(a)}), [props.auditores])
+  const auditorById = React.useMemo(
+    () => new Map(props.auditores.map((item) => [item.id_auditor, item.nombre])),
+    [props.auditores]
+  )
   const tiendasOptions = React.useMemo(() => props.tiendas.map((a) => {return mapTiendaOption(a)}), [props.tiendas])
 
   React.useEffect(() => {
@@ -245,7 +249,7 @@ export function PlanAccionHome(props: PlanAccionHomeProps) {
                           <span>{plan.descripcion_hallazgo || 'Sin descripcion'}</span>
                         </div>
                       </td>
-                      <td>{plan.responsable || 'Sin responsable'}</td>
+                      <td>{plan.responsable != null ? auditorById.get(plan.responsable) ?? 'Sin responsable' : 'Sin responsable'}</td>
                       <td>
                         <span className={`plan-accion-page__status plan-accion-page__status--${getStatusTone(plan.estado)}`}>
                           {plan.estado || 'Sin estado'}
