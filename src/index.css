@@ -99,6 +99,7 @@
 
 html {
   scroll-behavior: smooth;
+  zoom: 85%;
 }
 
 body {
@@ -118,7 +119,7 @@ textarea {
 }
 
 #root {
-  min-height: 100svh;
+  min-height: calc(100svh / 0.85);
 }
 
 h1,

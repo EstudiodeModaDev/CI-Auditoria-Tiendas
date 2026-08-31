@@ -1,5 +1,5 @@
 .app-shell {
-  min-height: 100svh;
+  min-height: calc(100svh / 0.85);
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   transition: grid-template-columns var(--motion-base);
@@ -12,7 +12,7 @@
 .app-shell__sidebar {
   position: sticky;
   top: 0;
-  height: 100svh;
+  height: calc(100svh / 0.85);
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: 24px;

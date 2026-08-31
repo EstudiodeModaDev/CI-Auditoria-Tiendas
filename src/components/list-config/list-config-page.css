@@ -1,5 +1,5 @@
 .list-config {
-  min-height: 100svh;
+  min-height: calc(100svh / 0.85);
   display: grid;
   grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
   gap: var(--space-6);
@@ -28,7 +28,7 @@
   padding: var(--space-5);
   position: sticky;
   top: var(--space-6);
-  height: calc(100svh - var(--space-7));
+  height: calc((100svh - var(--space-7)) / 0.85);
   overflow: auto;
 }
 
