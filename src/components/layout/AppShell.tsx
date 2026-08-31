@@ -78,16 +78,6 @@ export function AppShell({ children }: AppShellProps) {
       </aside>
 
       <div className="app-shell__content">
-        <header className="app-shell__topbar">
-          <div>
-            <strong>Panel de trabajo</strong>
-            <p>Accede a tus rutas segun el rol asignado.</p>
-          </div>
-          <button className="app-shell__signout app-shell__signout--topbar" type="button" onClick={handleSignOut}>
-            Salir
-          </button>
-        </header>
-
         <div className="app-shell__page">
           {children}
         </div>
