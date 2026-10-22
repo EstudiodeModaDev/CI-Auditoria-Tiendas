@@ -18,7 +18,7 @@ function getUserLabel(email: string | undefined) {
 function getRoleLabel(role: UserRole) {
   if (role === 'admin') return 'Administrador'
   if (role === 'auditor') return 'Auditor'
-  if (role === 'supervisor') return 'Supervisor'
+  if (role === 'jefe-zona') return 'Jefe de zona'
   return 'Usuario autenticado'
 }
 

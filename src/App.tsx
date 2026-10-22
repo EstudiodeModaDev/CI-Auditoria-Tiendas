@@ -139,12 +139,12 @@ function App() {
     <Routes>
       <Route path="/" element={<LoginPage />} />
       <Route path="/not-authorized" element={
-        <ProtectedRoute allowedRoles={['authenticated', 'admin', 'auditor', 'supervisor']}>
+        <ProtectedRoute allowedRoles={['authenticated', 'admin', 'auditor',]}>
           <NotAuthorizedPage />
         </ProtectedRoute>
       } />
       <Route path="/home" element={
-        <ProtectedRoute allowedRoles={['admin', 'auditor']}>
+        <ProtectedRoute allowedRoles={['admin', 'auditor', 'jefe-zona']}>
           <AppShell>
             <AuditoriaHomePage
               auditores={auditores}
